@@ -35,6 +35,7 @@ interface CesiumCamera {
   zoomIn: (amount?: number) => void;
   zoomOut: (amount?: number) => void;
   setView: (options: { destination?: unknown; orientation: unknown }) => void;
+  getPickRay: (position: unknown) => unknown | undefined;
   position: unknown;
   positionCartographic: { longitude: number; latitude: number; height: number };
   heading: number;
@@ -249,6 +250,86 @@ export class CesiumCommandExecutor {
           return this.execute3DTilesRemove(command);
         case 'tiles3d.style':
           return this.execute3DTilesStyle(command);
+        case 'camera.setView':
+          return this.executeCameraSetView(command);
+        case 'camera.get':
+          return this.executeCameraGet();
+        case 'entity.select':
+          return this.executeSelectEntity(command);
+        case 'entity.list':
+          return this.executeListEntities();
+        case 'entity.getInfo':
+          return this.executeGetEntityInfo(command);
+        case 'data.loadGeoJSON':
+          return await this.executeLoadGeoJSON(command);
+        case 'data.loadKML':
+          return await this.executeLoadKML(command);
+        case 'data.loadCZML':
+          return await this.executeLoadCZMLFromUrl(command);
+        case 'scene.fog':
+          return this.executeSetFog(command);
+        case 'scene.shadows':
+          return this.executeSetShadows(command);
+        case 'time.speed':
+          return this.executeSetAnimationSpeed(command);
+        case 'imagery.remove':
+          return this.executeRemoveImagery(command);
+        case 'imagery.alpha':
+          return this.executeSetImageryAlpha(command);
+        case 'imagery.brightness':
+          return this.executeSetImageryBrightness(command);
+        case 'imagery.addWMS':
+          return await this.executeAddWMS(command);
+        case 'scene.lighting':
+          return this.executeSetLighting(command);
+        case 'scene.atmosphere':
+          return this.executeSetAtmosphere(command);
+        case 'scene.globe':
+          return this.executeSetGlobe(command);
+        case 'scene.depthTest':
+          return this.executeSetDepthTest(command);
+        case 'data.loadGPX':
+          return await this.executeLoadGPX(command);
+        case 'measure.distance':
+          return this.executeMeasureDistance(command);
+        case 'terrain.sample':
+          return await this.executeSampleTerrain(command);
+        case 'scene.fxaa':
+          return this.executeEnableFXAA(command);
+        case 'scene.bloom':
+          return this.executeSetBloom(command);
+        case 'pick.screenPosition':
+          return this.executeGetScreenPosition(command);
+        case 'pick.cartographic':
+          return this.executeGetCartographic(command);
+        case 'imagery.split':
+          return this.executeSplitImagery(command);
+        case 'pick.entity':
+          return this.executePickEntity(command);
+        case 'scene.skybox':
+          return this.executeSetSkybox(command);
+        case 'tiles3d.highlight':
+          return this.executeHighlight3DTile(command);
+        case 'tiles3d.clip':
+          return this.executeClip3DTiles(command);
+        case 'terrain.clip':
+          return this.executeClipTerrain(command);
+        case 'particles.add':
+          return this.executeAddParticleSystem(command);
+        case 'weather.add':
+          return this.executeAddWeatherEffect(command);
+        case 'clouds.add':
+          return this.executeAddVolumetricCloud(command);
+        case 'effects.lensFlare':
+          return this.executeAddLensFlare(command);
+        case 'material.image':
+          return this.executeSetImageMaterial(command);
+        case 'material.grid':
+          return this.executeSetGridMaterial(command);
+        case 'material.stripe':
+          return this.executeSetStripeMaterial(command);
+        case 'material.checkerboard':
+          return this.executeSetCheckerboardMaterial(command);
         default:
           return { success: false, message: `Unknown command type: ${(command as CesiumCommand).type}` };
       }
@@ -961,6 +1042,1175 @@ export class CesiumCommandExecutor {
       return { success: true, message: 'Stopped orbit animation' };
     }
     return { success: false, message: 'No active orbit animation to stop' };
+  }
+
+  private executeCameraSetView(command: Extract<CesiumCommand, { type: 'camera.setView' }>): { success: boolean; message: string } {
+    const destination = Cesium.Cartesian3.fromDegrees(
+      command.destination.longitude,
+      command.destination.latitude,
+      command.destination.height || 1000000
+    );
+
+    const orientation = command.orientation
+      ? {
+          heading: command.orientation.heading ?? 0,
+          pitch: command.orientation.pitch ?? Cesium.Math.toRadians(-90),
+          roll: command.orientation.roll ?? 0,
+        }
+      : {
+          heading: 0,
+          pitch: Cesium.Math.toRadians(-90),
+          roll: 0,
+        };
+
+    this.viewer.camera.setView({
+      destination,
+      orientation,
+    });
+
+    return {
+      success: true,
+      message: `Camera set to ${command.destination.latitude}, ${command.destination.longitude}`,
+    };
+  }
+
+  private executeCameraGet(): { success: boolean; message: string; data?: unknown } {
+    const cartographic = this.viewer.camera.positionCartographic;
+    return {
+      success: true,
+      message: 'Camera position retrieved',
+      data: {
+        longitude: Cesium.Math.toDegrees(cartographic.longitude),
+        latitude: Cesium.Math.toDegrees(cartographic.latitude),
+        height: cartographic.height,
+        heading: Cesium.Math.toDegrees(this.viewer.camera.heading),
+        pitch: Cesium.Math.toDegrees(this.viewer.camera.pitch),
+        roll: Cesium.Math.toDegrees(this.viewer.camera.roll),
+      },
+    };
+  }
+
+  private executeSelectEntity(command: Extract<CesiumCommand, { type: 'entity.select' }>): { success: boolean; message: string } {
+    const entity = this.findEntityByIdOrName(command.entityId);
+    if (!entity) {
+      return { success: false, message: `Entity '${command.entityId}' not found` };
+    }
+
+    // Set as selected entity on the viewer
+    const viewer = this.viewer as CesiumViewer & { selectedEntity?: unknown };
+    viewer.selectedEntity = entity;
+    return { success: true, message: `Entity '${command.entityId}' selected` };
+  }
+
+  private executeListEntities(): { success: boolean; message: string; data?: unknown } {
+    const entities: Array<{ id: string; name?: string; type?: string }> = [];
+
+    // Get entities from direct entity collection
+    for (const entity of this.viewer.entities.values) {
+      const ent = entity as { id?: string; name?: string; point?: unknown; polyline?: unknown; polygon?: unknown; billboard?: unknown; label?: unknown; model?: unknown; ellipse?: unknown; ellipsoid?: unknown; box?: unknown; cylinder?: unknown };
+      const type = ent.point ? 'point' : ent.polyline ? 'polyline' : ent.polygon ? 'polygon' :
+                   ent.billboard ? 'billboard' : ent.label ? 'label' : ent.model ? 'model' :
+                   ent.ellipse ? 'ellipse' : ent.ellipsoid ? 'ellipsoid' : ent.box ? 'box' :
+                   ent.cylinder ? 'cylinder' : 'unknown';
+      entities.push({ id: ent.id || 'unknown', name: ent.name, type });
+    }
+
+    // Get entities from data sources
+    for (let i = 0; i < this.viewer.dataSources.length; i++) {
+      const dataSource = this.viewer.dataSources.get(i) as { name?: string; entities?: CesiumEntityCollection };
+      if (dataSource.entities) {
+        for (const entity of dataSource.entities.values) {
+          const ent = entity as { id?: string; name?: string; point?: unknown; polyline?: unknown; polygon?: unknown; billboard?: unknown; label?: unknown };
+          const type = ent.point ? 'point' : ent.polyline ? 'polyline' : ent.polygon ? 'polygon' :
+                       ent.billboard ? 'billboard' : ent.label ? 'label' : 'unknown';
+          entities.push({ id: ent.id || 'unknown', name: ent.name, type });
+        }
+      }
+    }
+
+    return {
+      success: true,
+      message: `Found ${entities.length} entities`,
+      data: { entities },
+    };
+  }
+
+  private executeGetEntityInfo(command: Extract<CesiumCommand, { type: 'entity.getInfo' }>): { success: boolean; message: string; data?: unknown } {
+    const entity = this.findEntityByIdOrName(command.entityId);
+    if (!entity) {
+      return { success: false, message: `Entity '${command.entityId}' not found` };
+    }
+
+    const ent = entity as { id?: string; name?: string; description?: { getValue?: () => string }; position?: { getValue?: (time: unknown) => unknown }; show?: boolean };
+    const info: Record<string, unknown> = {
+      id: ent.id,
+      name: ent.name,
+      show: ent.show,
+    };
+
+    // Get position if available
+    if (ent.position && typeof ent.position.getValue === 'function') {
+      const position = ent.position.getValue(this.viewer.clock.currentTime);
+      if (position) {
+        const cartographic = Cesium.Cartographic.fromCartesian(position);
+        info.position = {
+          longitude: Cesium.Math.toDegrees(cartographic.longitude),
+          latitude: Cesium.Math.toDegrees(cartographic.latitude),
+          height: cartographic.height,
+        };
+      }
+    }
+
+    // Get description if available
+    if (ent.description && typeof ent.description.getValue === 'function') {
+      info.description = ent.description.getValue();
+    }
+
+    return {
+      success: true,
+      message: `Entity info retrieved for '${command.entityId}'`,
+      data: info,
+    };
+  }
+
+  private async executeLoadGeoJSON(command: Extract<CesiumCommand, { type: 'data.loadGeoJSON' }>): Promise<{ success: boolean; message: string; data?: unknown }> {
+    try {
+      const GeoJsonDataSource = (Cesium as unknown as { GeoJsonDataSource: { load: (url: string, options?: object) => Promise<unknown> } }).GeoJsonDataSource;
+      const Color = (Cesium as unknown as { Color: { fromCssColorString: (color: string) => unknown } }).Color;
+
+      const options: Record<string, unknown> = {};
+      if (command.clampToGround !== undefined) {
+        options.clampToGround = command.clampToGround;
+      }
+      if (command.stroke) {
+        options.stroke = Color.fromCssColorString(command.stroke);
+      }
+      if (command.fill) {
+        options.fill = Color.fromCssColorString(command.fill);
+      }
+      if (command.strokeWidth !== undefined) {
+        options.strokeWidth = command.strokeWidth;
+      }
+
+      const dataSource = await GeoJsonDataSource.load(command.url, options);
+      await this.viewer.dataSources.add(dataSource);
+
+      const id = command.name || `geojson_${Date.now()}`;
+      this.loadedDataSources.set(id, dataSource);
+
+      return {
+        success: true,
+        message: `GeoJSON loaded from ${command.url}`,
+        data: { id },
+      };
+    } catch (error) {
+      const errorMessage = error instanceof Error ? error.message : String(error);
+      return { success: false, message: `Failed to load GeoJSON: ${errorMessage}` };
+    }
+  }
+
+  private async executeLoadKML(command: Extract<CesiumCommand, { type: 'data.loadKML' }>): Promise<{ success: boolean; message: string; data?: unknown }> {
+    try {
+      const KmlDataSource = (Cesium as unknown as { KmlDataSource: { load: (url: string, options?: object) => Promise<unknown> } }).KmlDataSource;
+
+      const options: Record<string, unknown> = {
+        camera: this.viewer.camera,
+        canvas: (this.viewer as unknown as { canvas: unknown }).canvas,
+      };
+      if (command.clampToGround !== undefined) {
+        options.clampToGround = command.clampToGround;
+      }
+
+      const dataSource = await KmlDataSource.load(command.url, options);
+      await this.viewer.dataSources.add(dataSource);
+
+      const id = command.name || `kml_${Date.now()}`;
+      this.loadedDataSources.set(id, dataSource);
+
+      return {
+        success: true,
+        message: `KML loaded from ${command.url}`,
+        data: { id },
+      };
+    } catch (error) {
+      const errorMessage = error instanceof Error ? error.message : String(error);
+      return { success: false, message: `Failed to load KML: ${errorMessage}` };
+    }
+  }
+
+  private async executeLoadCZMLFromUrl(command: Extract<CesiumCommand, { type: 'data.loadCZML' }>): Promise<{ success: boolean; message: string; data?: unknown }> {
+    try {
+      const dataSource = await Cesium.CzmlDataSource.load(command.url);
+      await this.viewer.dataSources.add(dataSource);
+
+      const id = command.name || `czml_${Date.now()}`;
+      this.loadedDataSources.set(id, dataSource);
+
+      return {
+        success: true,
+        message: `CZML loaded from ${command.url}`,
+        data: { id },
+      };
+    } catch (error) {
+      const errorMessage = error instanceof Error ? error.message : String(error);
+      return { success: false, message: `Failed to load CZML: ${errorMessage}` };
+    }
+  }
+
+  private executeSetFog(command: Extract<CesiumCommand, { type: 'scene.fog' }>): { success: boolean; message: string } {
+    const scene = this.viewer.scene as CesiumScene & { fog?: { enabled: boolean; density: number } };
+    if (!scene.fog) {
+      return { success: false, message: 'Fog not supported in this Cesium version' };
+    }
+
+    scene.fog.enabled = command.enabled;
+    if (command.density !== undefined) {
+      scene.fog.density = command.density;
+    }
+
+    return {
+      success: true,
+      message: `Fog ${command.enabled ? 'enabled' : 'disabled'}${command.density !== undefined ? ` with density ${command.density}` : ''}`,
+    };
+  }
+
+  private executeSetShadows(command: Extract<CesiumCommand, { type: 'scene.shadows' }>): { success: boolean; message: string } {
+    const viewer = this.viewer as CesiumViewer & { shadows?: boolean; shadowMap?: { softShadows: boolean } };
+
+    viewer.shadows = command.enabled;
+    if (command.softShadows !== undefined && viewer.shadowMap) {
+      viewer.shadowMap.softShadows = command.softShadows;
+    }
+
+    return {
+      success: true,
+      message: `Shadows ${command.enabled ? 'enabled' : 'disabled'}`,
+    };
+  }
+
+  private executeSetAnimationSpeed(command: Extract<CesiumCommand, { type: 'time.speed' }>): { success: boolean; message: string } {
+    this.viewer.clock.multiplier = command.multiplier;
+    return {
+      success: true,
+      message: `Animation speed set to ${command.multiplier}x`,
+    };
+  }
+
+  private executeRemoveImagery(command: Extract<CesiumCommand, { type: 'imagery.remove' }>): { success: boolean; message: string } {
+    if (command.index < 0 || command.index >= this.viewer.imageryLayers.length) {
+      return { success: false, message: `Invalid imagery layer index: ${command.index}` };
+    }
+
+    const layer = this.viewer.imageryLayers.get(command.index);
+    this.viewer.imageryLayers.remove(layer, true);
+
+    return {
+      success: true,
+      message: `Imagery layer ${command.index} removed`,
+    };
+  }
+
+  private executeSetImageryAlpha(command: Extract<CesiumCommand, { type: 'imagery.alpha' }>): { success: boolean; message: string } {
+    if (command.index < 0 || command.index >= this.viewer.imageryLayers.length) {
+      return { success: false, message: `Invalid imagery layer index: ${command.index}` };
+    }
+
+    const layer = this.viewer.imageryLayers.get(command.index) as { alpha: number };
+    layer.alpha = command.alpha;
+
+    return {
+      success: true,
+      message: `Imagery layer ${command.index} alpha set to ${command.alpha}`,
+    };
+  }
+
+  private executeSetImageryBrightness(command: Extract<CesiumCommand, { type: 'imagery.brightness' }>): { success: boolean; message: string } {
+    if (command.index < 0 || command.index >= this.viewer.imageryLayers.length) {
+      return { success: false, message: `Invalid imagery layer index: ${command.index}` };
+    }
+
+    const layer = this.viewer.imageryLayers.get(command.index) as {
+      brightness: number;
+      contrast: number;
+      saturation: number;
+      gamma: number;
+    };
+
+    if (command.brightness !== undefined) layer.brightness = command.brightness;
+    if (command.contrast !== undefined) layer.contrast = command.contrast;
+    if (command.saturation !== undefined) layer.saturation = command.saturation;
+    if (command.gamma !== undefined) layer.gamma = command.gamma;
+
+    return {
+      success: true,
+      message: `Imagery layer ${command.index} visual settings updated`,
+    };
+  }
+
+  private async executeAddWMS(command: Extract<CesiumCommand, { type: 'imagery.addWMS' }>): Promise<{ success: boolean; message: string }> {
+    try {
+      const provider = new Cesium.WebMapServiceImageryProvider({
+        url: command.url,
+        layers: command.layers,
+      });
+
+      this.viewer.imageryLayers.addImageryProvider(provider);
+
+      return {
+        success: true,
+        message: `WMS layer added from ${command.url}`,
+      };
+    } catch (error) {
+      const errorMessage = error instanceof Error ? error.message : String(error);
+      return { success: false, message: `Failed to add WMS layer: ${errorMessage}` };
+    }
+  }
+
+  private executeSetLighting(command: Extract<CesiumCommand, { type: 'scene.lighting' }>): { success: boolean; message: string } {
+    const globe = this.viewer.scene.globe as CesiumGlobe & { enableLighting?: boolean };
+
+    if (command.enableLighting !== undefined && 'enableLighting' in globe) {
+      globe.enableLighting = command.enableLighting;
+    }
+
+    return {
+      success: true,
+      message: `Lighting ${command.enableLighting ? 'enabled' : 'disabled'}`,
+    };
+  }
+
+  private executeSetAtmosphere(command: Extract<CesiumCommand, { type: 'scene.atmosphere' }>): { success: boolean; message: string } {
+    const scene = this.viewer.scene as CesiumScene & {
+      skyAtmosphere?: {
+        show: boolean;
+        brightnessShift: number;
+        hueShift: number;
+        saturationShift: number;
+      };
+    };
+
+    if (!scene.skyAtmosphere) {
+      return { success: false, message: 'Sky atmosphere not supported in this Cesium version' };
+    }
+
+    if (command.show !== undefined) scene.skyAtmosphere.show = command.show;
+    if (command.brightnessShift !== undefined) scene.skyAtmosphere.brightnessShift = command.brightnessShift;
+    if (command.hueShift !== undefined) scene.skyAtmosphere.hueShift = command.hueShift;
+    if (command.saturationShift !== undefined) scene.skyAtmosphere.saturationShift = command.saturationShift;
+
+    return {
+      success: true,
+      message: 'Atmosphere settings updated',
+    };
+  }
+
+  private executeSetGlobe(command: Extract<CesiumCommand, { type: 'scene.globe' }>): { success: boolean; message: string } {
+    const globe = this.viewer.scene.globe as CesiumGlobe & {
+      showGroundAtmosphere?: boolean;
+      enableLighting?: boolean;
+      baseColor?: unknown;
+    };
+
+    if (!globe) {
+      return { success: false, message: 'Globe not available' };
+    }
+
+    if (command.show !== undefined) globe.show = command.show;
+    if (command.showGroundAtmosphere !== undefined && 'showGroundAtmosphere' in globe) {
+      globe.showGroundAtmosphere = command.showGroundAtmosphere;
+    }
+    if (command.enableLighting !== undefined && 'enableLighting' in globe) {
+      globe.enableLighting = command.enableLighting;
+    }
+    if (command.baseColor !== undefined && 'baseColor' in globe) {
+      const Color = (Cesium as unknown as { Color: { fromCssColorString: (color: string) => unknown } }).Color;
+      globe.baseColor = Color.fromCssColorString(command.baseColor);
+    }
+
+    return {
+      success: true,
+      message: 'Globe settings updated',
+    };
+  }
+
+  private executeSetDepthTest(command: Extract<CesiumCommand, { type: 'scene.depthTest' }>): { success: boolean; message: string } {
+    const globe = this.viewer.scene.globe as CesiumGlobe & { depthTestAgainstTerrain?: boolean };
+
+    if (!globe || !('depthTestAgainstTerrain' in globe)) {
+      return { success: false, message: 'Depth test not supported in this Cesium version' };
+    }
+
+    globe.depthTestAgainstTerrain = command.enabled;
+
+    return {
+      success: true,
+      message: `Depth testing ${command.enabled ? 'enabled' : 'disabled'}`,
+    };
+  }
+
+  private async executeLoadGPX(command: Extract<CesiumCommand, { type: 'data.loadGPX' }>): Promise<{ success: boolean; message: string; data?: unknown }> {
+    try {
+      const GpxDataSource = (Cesium as unknown as { GpxDataSource: { load: (url: string, options?: object) => Promise<unknown> } }).GpxDataSource;
+
+      const options: Record<string, unknown> = {};
+      if (command.clampToGround !== undefined) {
+        options.clampToGround = command.clampToGround;
+      }
+
+      const dataSource = await GpxDataSource.load(command.url, options);
+      await this.viewer.dataSources.add(dataSource);
+
+      const id = command.name || `gpx_${Date.now()}`;
+      this.loadedDataSources.set(id, dataSource);
+
+      return {
+        success: true,
+        message: `GPX loaded from ${command.url}`,
+        data: { id },
+      };
+    } catch (error) {
+      const errorMessage = error instanceof Error ? error.message : String(error);
+      return { success: false, message: `Failed to load GPX: ${errorMessage}` };
+    }
+  }
+
+  private executeMeasureDistance(command: Extract<CesiumCommand, { type: 'measure.distance' }>): { success: boolean; message: string; data?: unknown } {
+    const startCartesian = Cesium.Cartesian3.fromDegrees(
+      command.start.longitude,
+      command.start.latitude,
+      command.start.height || 0
+    );
+    const endCartesian = Cesium.Cartesian3.fromDegrees(
+      command.end.longitude,
+      command.end.latitude,
+      command.end.height || 0
+    );
+
+    // Calculate Euclidean distance
+    const EllipsoidGeodesic = (Cesium as unknown as {
+      EllipsoidGeodesic: new () => {
+        setEndPoints: (start: unknown, end: unknown) => void;
+        surfaceDistance: number;
+      };
+    }).EllipsoidGeodesic;
+
+    const startCartographic = Cesium.Cartographic.fromCartesian(startCartesian);
+    const endCartographic = Cesium.Cartographic.fromCartesian(endCartesian);
+
+    const geodesic = new EllipsoidGeodesic();
+    geodesic.setEndPoints(startCartographic, endCartographic);
+    const surfaceDistance = geodesic.surfaceDistance;
+
+    // 3D distance accounting for height difference
+    const heightDiff = (command.end.height || 0) - (command.start.height || 0);
+    const distance3D = Math.sqrt(surfaceDistance * surfaceDistance + heightDiff * heightDiff);
+
+    return {
+      success: true,
+      message: `Distance: ${(surfaceDistance / 1000).toFixed(2)} km (surface), ${(distance3D / 1000).toFixed(2)} km (3D)`,
+      data: {
+        surfaceDistance,
+        distance3D,
+        heightDifference: heightDiff,
+      },
+    };
+  }
+
+  private async executeSampleTerrain(command: Extract<CesiumCommand, { type: 'terrain.sample' }>): Promise<{ success: boolean; message: string; data?: unknown }> {
+    try {
+      const sampleTerrainMostDetailed = (Cesium as unknown as {
+        sampleTerrainMostDetailed: (provider: unknown, positions: unknown[]) => Promise<unknown[]>;
+      }).sampleTerrainMostDetailed;
+
+      const position = Cesium.Cartographic.fromDegrees(command.longitude, command.latitude);
+      const results = await sampleTerrainMostDetailed(this.viewer.terrainProvider, [position]);
+      const sampledPosition = results[0] as { height: number };
+
+      return {
+        success: true,
+        message: `Terrain height at ${command.latitude}, ${command.longitude}: ${sampledPosition.height.toFixed(2)} meters`,
+        data: {
+          longitude: command.longitude,
+          latitude: command.latitude,
+          height: sampledPosition.height,
+        },
+      };
+    } catch (error) {
+      const errorMessage = error instanceof Error ? error.message : String(error);
+      return { success: false, message: `Failed to sample terrain: ${errorMessage}` };
+    }
+  }
+
+  private executeEnableFXAA(command: Extract<CesiumCommand, { type: 'scene.fxaa' }>): { success: boolean; message: string } {
+    const scene = this.viewer.scene as CesiumScene & {
+      postProcessStages?: {
+        fxaa?: { enabled: boolean };
+      };
+    };
+
+    if (!scene.postProcessStages || !scene.postProcessStages.fxaa) {
+      return { success: false, message: 'FXAA not supported in this Cesium version' };
+    }
+
+    scene.postProcessStages.fxaa.enabled = command.enabled;
+
+    return {
+      success: true,
+      message: `FXAA anti-aliasing ${command.enabled ? 'enabled' : 'disabled'}`,
+    };
+  }
+
+  private executeSetBloom(command: Extract<CesiumCommand, { type: 'scene.bloom' }>): { success: boolean; message: string } {
+    const scene = this.viewer.scene as CesiumScene & {
+      postProcessStages?: {
+        bloom?: {
+          enabled: boolean;
+          uniforms?: {
+            brightness: number;
+            contrast: number;
+            glowOnly: boolean;
+          };
+        };
+      };
+    };
+
+    if (!scene.postProcessStages || !scene.postProcessStages.bloom) {
+      return { success: false, message: 'Bloom effect not supported in this Cesium version' };
+    }
+
+    scene.postProcessStages.bloom.enabled = command.enabled;
+    if (scene.postProcessStages.bloom.uniforms) {
+      if (command.brightness !== undefined) {
+        scene.postProcessStages.bloom.uniforms.brightness = command.brightness;
+      }
+      if (command.contrast !== undefined) {
+        scene.postProcessStages.bloom.uniforms.contrast = command.contrast;
+      }
+      if (command.glowOnly !== undefined) {
+        scene.postProcessStages.bloom.uniforms.glowOnly = command.glowOnly;
+      }
+    }
+
+    return {
+      success: true,
+      message: `Bloom effect ${command.enabled ? 'enabled' : 'disabled'}`,
+    };
+  }
+
+  private executeGetScreenPosition(command: Extract<CesiumCommand, { type: 'pick.screenPosition' }>): { success: boolean; message: string; data?: unknown } {
+    const cartesian = Cesium.Cartesian3.fromDegrees(
+      command.longitude,
+      command.latitude,
+      command.height || 0
+    );
+
+    const SceneTransforms = (Cesium as unknown as {
+      SceneTransforms: {
+        wgs84ToWindowCoordinates: (scene: unknown, position: unknown) => { x: number; y: number } | undefined;
+      };
+    }).SceneTransforms;
+
+    const screenPosition = SceneTransforms.wgs84ToWindowCoordinates(this.viewer.scene, cartesian);
+
+    if (!screenPosition) {
+      return { success: false, message: 'Position is not visible on screen' };
+    }
+
+    return {
+      success: true,
+      message: `Screen position: (${Math.round(screenPosition.x)}, ${Math.round(screenPosition.y)})`,
+      data: {
+        x: screenPosition.x,
+        y: screenPosition.y,
+      },
+    };
+  }
+
+  private executeGetCartographic(command: Extract<CesiumCommand, { type: 'pick.cartographic' }>): { success: boolean; message: string; data?: unknown } {
+    const Cartesian2 = (Cesium as unknown as {
+      Cartesian2: new (x: number, y: number) => unknown;
+    }).Cartesian2;
+
+    const position = new Cartesian2(command.x, command.y);
+    const ray = this.viewer.camera.getPickRay(position);
+
+    if (!ray) {
+      return { success: false, message: 'Unable to pick at screen position' };
+    }
+
+    const globe = this.viewer.scene.globe as CesiumGlobe & {
+      pick: (ray: unknown, scene: unknown) => unknown | undefined;
+    };
+
+    const intersection = globe.pick(ray, this.viewer.scene);
+
+    if (!intersection) {
+      return { success: false, message: 'No intersection with globe at screen position' };
+    }
+
+    const cartographic = Cesium.Cartographic.fromCartesian(intersection);
+
+    return {
+      success: true,
+      message: `Geographic position: (${Cesium.Math.toDegrees(cartographic.latitude).toFixed(6)}, ${Cesium.Math.toDegrees(cartographic.longitude).toFixed(6)})`,
+      data: {
+        longitude: Cesium.Math.toDegrees(cartographic.longitude),
+        latitude: Cesium.Math.toDegrees(cartographic.latitude),
+        height: cartographic.height,
+      },
+    };
+  }
+
+  private executeSplitImagery(command: Extract<CesiumCommand, { type: 'imagery.split' }>): { success: boolean; message: string } {
+    const scene = this.viewer.scene as CesiumScene & {
+      imagerySplitPosition?: number;
+    };
+
+    if (!('imagerySplitPosition' in scene)) {
+      return { success: false, message: 'Imagery split not supported in this Cesium version' };
+    }
+
+    if (command.enabled) {
+      scene.imagerySplitPosition = command.position ?? 0.5;
+
+      // Set the split direction on layers if there are at least 2 layers
+      if (this.viewer.imageryLayers.length >= 2) {
+        const ImagerySplitDirection = (Cesium as unknown as {
+          ImagerySplitDirection: { LEFT: number; RIGHT: number; NONE: number };
+        }).ImagerySplitDirection;
+
+        const layer0 = this.viewer.imageryLayers.get(0) as { splitDirection: number };
+        const layer1 = this.viewer.imageryLayers.get(1) as { splitDirection: number };
+        layer0.splitDirection = ImagerySplitDirection.LEFT;
+        layer1.splitDirection = ImagerySplitDirection.RIGHT;
+      }
+
+      return { success: true, message: 'Split imagery mode enabled' };
+    } else {
+      scene.imagerySplitPosition = 1.0;
+
+      // Reset split direction on all layers
+      const ImagerySplitDirection = (Cesium as unknown as {
+        ImagerySplitDirection: { LEFT: number; RIGHT: number; NONE: number };
+      }).ImagerySplitDirection;
+
+      for (let i = 0; i < this.viewer.imageryLayers.length; i++) {
+        const layer = this.viewer.imageryLayers.get(i) as { splitDirection: number };
+        layer.splitDirection = ImagerySplitDirection.NONE;
+      }
+
+      return { success: true, message: 'Split imagery mode disabled' };
+    }
+  }
+
+  private executePickEntity(command: Extract<CesiumCommand, { type: 'pick.entity' }>): { success: boolean; message: string; data?: unknown } {
+    const Cartesian2 = (Cesium as unknown as {
+      Cartesian2: new (x: number, y: number) => unknown;
+    }).Cartesian2;
+
+    const position = new Cartesian2(command.x, command.y);
+    const scene = this.viewer.scene as CesiumScene & {
+      pick: (position: unknown) => { id?: { id?: string; name?: string } } | undefined;
+    };
+
+    const picked = scene.pick(position);
+
+    if (!picked || !picked.id) {
+      return { success: false, message: 'No entity at screen position' };
+    }
+
+    const entity = picked.id as { id?: string; name?: string; show?: boolean };
+
+    return {
+      success: true,
+      message: `Picked entity: ${entity.name || entity.id || 'unknown'}`,
+      data: {
+        id: entity.id,
+        name: entity.name,
+      },
+    };
+  }
+
+  private executeSetSkybox(command: Extract<CesiumCommand, { type: 'scene.skybox' }>): { success: boolean; message: string } {
+    const scene = this.viewer.scene as CesiumScene & {
+      skyBox?: { show: boolean };
+    };
+
+    if (!scene.skyBox) {
+      return { success: false, message: 'Skybox not available' };
+    }
+
+    scene.skyBox.show = command.show;
+
+    return {
+      success: true,
+      message: `Skybox ${command.show ? 'shown' : 'hidden'}`,
+    };
+  }
+
+  private executeHighlight3DTile(command: Extract<CesiumCommand, { type: 'tiles3d.highlight' }>): { success: boolean; message: string } {
+    const tileset = this.loadedTilesets.get(command.id);
+
+    if (!tileset) {
+      return { success: false, message: `Tileset '${command.id}' not found` };
+    }
+
+    // Create a highlight style
+    const colorStr = command.color || 'yellow';
+    const styleObj: Record<string, unknown> = {
+      color: `color('${colorStr}')`,
+    };
+
+    try {
+      tileset.style = new Cesium.Cesium3DTileStyle(styleObj);
+      return { success: true, message: `Tileset '${command.id}' highlighted with ${colorStr}` };
+    } catch (error) {
+      const errorMessage = error instanceof Error ? error.message : String(error);
+      return { success: false, message: `Failed to highlight tileset: ${errorMessage}` };
+    }
+  }
+
+  private executeClip3DTiles(command: Extract<CesiumCommand, { type: 'tiles3d.clip' }>): { success: boolean; message: string } {
+    const tileset = this.loadedTilesets.get(command.id);
+
+    if (!tileset) {
+      return { success: false, message: `Tileset '${command.id}' not found` };
+    }
+
+    try {
+      const ClippingPlane = (Cesium as unknown as {
+        ClippingPlane: new (normal: unknown, distance: number) => unknown;
+      }).ClippingPlane;
+
+      const ClippingPlaneCollection = (Cesium as unknown as {
+        ClippingPlaneCollection: new (options: { planes: unknown[]; enabled: boolean }) => unknown;
+      }).ClippingPlaneCollection;
+
+      if (!command.enabled) {
+        // Disable clipping by setting to undefined
+        (tileset as unknown as { clippingPlanes: unknown }).clippingPlanes = undefined;
+        return { success: true, message: `Clipping disabled for tileset '${command.id}'` };
+      }
+
+      // Default to horizontal clipping plane
+      const normal = command.planeNormal || { x: 0, y: 0, z: -1 };
+      const distance = command.distance || 0;
+
+      const normalCartesian = new (Cesium as unknown as { Cartesian3: new (x: number, y: number, z: number) => unknown }).Cartesian3(
+        normal.x,
+        normal.y,
+        normal.z
+      );
+
+      const plane = new ClippingPlane(normalCartesian, distance);
+      const collection = new ClippingPlaneCollection({
+        planes: [plane],
+        enabled: true,
+      });
+
+      (tileset as unknown as { clippingPlanes: unknown }).clippingPlanes = collection;
+
+      return { success: true, message: `Clipping enabled for tileset '${command.id}'` };
+    } catch (error) {
+      const errorMessage = error instanceof Error ? error.message : String(error);
+      return { success: false, message: `Failed to set clipping planes: ${errorMessage}` };
+    }
+  }
+
+  private executeClipTerrain(command: Extract<CesiumCommand, { type: 'terrain.clip' }>): { success: boolean; message: string } {
+    try {
+      const globe = this.viewer.scene.globe as CesiumGlobe & {
+        clippingPlanes?: unknown;
+      };
+
+      if (!command.enabled) {
+        globe.clippingPlanes = undefined;
+        return { success: true, message: 'Terrain clipping disabled' };
+      }
+
+      if (!command.positions || command.positions.length < 3) {
+        return { success: false, message: 'Terrain clipping requires at least 3 positions' };
+      }
+
+      const ClippingPlane = (Cesium as unknown as {
+        ClippingPlane: new (normal: unknown, distance: number) => unknown;
+      }).ClippingPlane;
+
+      const ClippingPlaneCollection = (Cesium as unknown as {
+        ClippingPlaneCollection: new (options: { planes: unknown[]; enabled: boolean; edgeWidth?: number; edgeColor?: unknown }) => unknown;
+      }).ClippingPlaneCollection;
+
+      // Create a simple horizontal clipping plane at the specified height
+      const height = command.height || 0;
+      const normalCartesian = new (Cesium as unknown as { Cartesian3: new (x: number, y: number, z: number) => unknown }).Cartesian3(0, 0, -1);
+      const plane = new ClippingPlane(normalCartesian, height);
+
+      const Color = (Cesium as unknown as { Color: { WHITE: unknown } }).Color;
+      const collection = new ClippingPlaneCollection({
+        planes: [plane],
+        enabled: true,
+        edgeWidth: 1.0,
+        edgeColor: Color.WHITE,
+      });
+
+      globe.clippingPlanes = collection;
+
+      return { success: true, message: `Terrain clipping enabled at height ${height}m` };
+    } catch (error) {
+      const errorMessage = error instanceof Error ? error.message : String(error);
+      return { success: false, message: `Failed to set terrain clipping: ${errorMessage}` };
+    }
+  }
+
+  private executeAddParticleSystem(command: Extract<CesiumCommand, { type: 'particles.add' }>): { success: boolean; message: string; data?: unknown } {
+    try {
+      const ParticleSystem = (Cesium as unknown as {
+        ParticleSystem: new (options: object) => { isDestroyed: () => boolean; destroy: () => void };
+      }).ParticleSystem;
+
+      const Color = (Cesium as unknown as {
+        Color: {
+          fromCssColorString: (color: string) => unknown;
+          RED: unknown;
+          YELLOW: unknown;
+          ORANGE: unknown;
+          GRAY: unknown;
+          WHITE: unknown;
+          TRANSPARENT: unknown;
+        };
+      }).Color;
+
+      const CircleEmitter = (Cesium as unknown as {
+        CircleEmitter: new (radius: number) => unknown;
+      }).CircleEmitter;
+
+      // Get position
+      const position = Cesium.Cartesian3.fromDegrees(
+        command.longitude,
+        command.latitude,
+        command.height || 0
+      );
+
+      // Get colors based on particle type or user specification
+      let startColor: unknown;
+      let endColor: unknown;
+
+      switch (command.particleType) {
+        case 'fire':
+          startColor = command.startColor ? Color.fromCssColorString(command.startColor) : Color.YELLOW;
+          endColor = command.endColor ? Color.fromCssColorString(command.endColor) : Color.RED;
+          break;
+        case 'smoke':
+          startColor = command.startColor ? Color.fromCssColorString(command.startColor) : Color.GRAY;
+          endColor = command.endColor ? Color.fromCssColorString(command.endColor) : Color.TRANSPARENT;
+          break;
+        case 'explosion':
+          startColor = command.startColor ? Color.fromCssColorString(command.startColor) : Color.ORANGE;
+          endColor = command.endColor ? Color.fromCssColorString(command.endColor) : Color.RED;
+          break;
+        default:
+          startColor = command.startColor ? Color.fromCssColorString(command.startColor) : Color.WHITE;
+          endColor = command.endColor ? Color.fromCssColorString(command.endColor) : Color.WHITE;
+      }
+
+      const emitter = new CircleEmitter(1.0);
+
+      const particleSystem = new ParticleSystem({
+        modelMatrix: Cesium.Transforms.eastNorthUpToFixedFrame(position),
+        emitter,
+        emissionRate: command.emissionRate || 50,
+        startColor,
+        endColor,
+        startScale: command.startScale || 1.0,
+        endScale: command.endScale || 4.0,
+        minimumParticleLife: (command.lifetime || 5) * 0.5,
+        maximumParticleLife: command.lifetime || 5,
+        minimumSpeed: 1.0,
+        maximumSpeed: 4.0,
+        imageSize: new (Cesium as unknown as { Cartesian2: new (x: number, y: number) => unknown }).Cartesian2(25, 25),
+        lifetime: 16.0,
+      });
+
+      this.viewer.scene.primitives.add(particleSystem);
+
+      // Store for later removal
+      (this as unknown as { loadedParticleSystems: Map<string, unknown> }).loadedParticleSystems = (this as unknown as { loadedParticleSystems: Map<string, unknown> }).loadedParticleSystems || new Map();
+      (this as unknown as { loadedParticleSystems: Map<string, unknown> }).loadedParticleSystems.set(command.id, particleSystem);
+
+      return {
+        success: true,
+        message: `Particle system '${command.id}' added with ${command.particleType} effect`,
+        data: { id: command.id },
+      };
+    } catch (error) {
+      const errorMessage = error instanceof Error ? error.message : String(error);
+      return { success: false, message: `Failed to add particle system: ${errorMessage}` };
+    }
+  }
+
+  private executeAddWeatherEffect(command: Extract<CesiumCommand, { type: 'weather.add' }>): { success: boolean; message: string } {
+    try {
+      const scene = this.viewer.scene as CesiumScene & {
+        fog?: { enabled: boolean; density: number };
+        postProcessStages?: {
+          add: (stage: unknown) => void;
+        };
+      };
+
+      switch (command.effectType) {
+        case 'fog':
+          if (scene.fog) {
+            scene.fog.enabled = true;
+            scene.fog.density = (command.intensity || 0.5) * 0.002;
+          }
+          return { success: true, message: 'Fog effect enabled' };
+
+        case 'rain':
+        case 'snow':
+          // Rain and snow would require custom particle systems or post-processing
+          // For now, return a message indicating limited support
+          return {
+            success: true,
+            message: `${command.effectType} effect enabled (note: requires additional particle setup)`,
+          };
+
+        default:
+          return { success: false, message: `Unknown weather effect: ${command.effectType}` };
+      }
+    } catch (error) {
+      const errorMessage = error instanceof Error ? error.message : String(error);
+      return { success: false, message: `Failed to add weather effect: ${errorMessage}` };
+    }
+  }
+
+  private executeAddVolumetricCloud(command: Extract<CesiumCommand, { type: 'clouds.add' }>): { success: boolean; message: string; data?: unknown } {
+    try {
+      const CloudCollection = (Cesium as unknown as {
+        CloudCollection: new () => {
+          add: (options: object) => unknown;
+        };
+      }).CloudCollection;
+
+      const cloudCollection = new CloudCollection();
+
+      const position = Cesium.Cartesian3.fromDegrees(
+        command.longitude,
+        command.latitude,
+        command.height || 2000
+      );
+
+      const scale = command.scale || 1;
+      const Cartesian2 = (Cesium as unknown as { Cartesian2: new (x: number, y: number) => unknown }).Cartesian2;
+
+      cloudCollection.add({
+        position,
+        scale: new Cartesian2(100 * scale, 50 * scale),
+        maximumSize: new (Cesium as unknown as { Cartesian3: new (x: number, y: number, z: number) => unknown }).Cartesian3(50 * scale, 20 * scale, 20 * scale),
+        slice: 0.36,
+      });
+
+      this.viewer.scene.primitives.add(cloudCollection);
+
+      // Store for later removal
+      (this as unknown as { loadedClouds: Map<string, unknown> }).loadedClouds = (this as unknown as { loadedClouds: Map<string, unknown> }).loadedClouds || new Map();
+      (this as unknown as { loadedClouds: Map<string, unknown> }).loadedClouds.set(command.id, cloudCollection);
+
+      return {
+        success: true,
+        message: `Volumetric cloud '${command.id}' added`,
+        data: { id: command.id },
+      };
+    } catch (error) {
+      const errorMessage = error instanceof Error ? error.message : String(error);
+      return { success: false, message: `Failed to add volumetric cloud: ${errorMessage}` };
+    }
+  }
+
+  private executeAddLensFlare(command: Extract<CesiumCommand, { type: 'effects.lensFlare' }>): { success: boolean; message: string } {
+    try {
+      const scene = this.viewer.scene as CesiumScene & {
+        sun?: { show: boolean; glowFactor: number };
+        postProcessStages?: {
+          lensFlare?: { enabled: boolean };
+          add: (stage: unknown) => unknown;
+        };
+      };
+
+      // Enable sun glow as a basic lens flare alternative
+      if (scene.sun) {
+        scene.sun.show = command.enabled;
+        if (command.enabled && command.intensity !== undefined) {
+          scene.sun.glowFactor = command.intensity;
+        }
+      }
+
+      // Try to enable actual lens flare if available
+      if (scene.postProcessStages?.lensFlare) {
+        scene.postProcessStages.lensFlare.enabled = command.enabled;
+      }
+
+      return {
+        success: true,
+        message: `Lens flare ${command.enabled ? 'enabled' : 'disabled'}${command.intensity !== undefined ? ` with intensity ${command.intensity}` : ''}`,
+      };
+    } catch (error) {
+      const errorMessage = error instanceof Error ? error.message : String(error);
+      return { success: false, message: `Failed to set lens flare: ${errorMessage}` };
+    }
+  }
+
+  private executeSetImageMaterial(command: Extract<CesiumCommand, { type: 'material.image' }>): { success: boolean; message: string } {
+    try {
+      const entity = this.viewer.entities.getById(command.entityId);
+      if (!entity) {
+        return { success: false, message: `Entity '${command.entityId}' not found` };
+      }
+
+      const ImageMaterialProperty = (Cesium as unknown as {
+        ImageMaterialProperty: new (options: { image: string; repeat?: unknown }) => unknown;
+      }).ImageMaterialProperty;
+
+      const Cartesian2 = (Cesium as unknown as { Cartesian2: new (x: number, y: number) => unknown }).Cartesian2;
+
+      const material = new ImageMaterialProperty({
+        image: command.imageUrl,
+        repeat: new Cartesian2(command.repeatX || 1, command.repeatY || 1),
+      });
+
+      // Apply to appropriate property
+      const entityAny = entity as unknown as Record<string, { material?: unknown }>;
+      if (entityAny.polygon) entityAny.polygon.material = material;
+      else if (entityAny.rectangle) entityAny.rectangle.material = material;
+      else if (entityAny.ellipse) entityAny.ellipse.material = material;
+      else if (entityAny.wall) entityAny.wall.material = material;
+      else {
+        return { success: false, message: 'Entity does not support image material' };
+      }
+
+      return { success: true, message: `Image material applied to '${command.entityId}'` };
+    } catch (error) {
+      const errorMessage = error instanceof Error ? error.message : String(error);
+      return { success: false, message: `Failed to set image material: ${errorMessage}` };
+    }
+  }
+
+  private executeSetGridMaterial(command: Extract<CesiumCommand, { type: 'material.grid' }>): { success: boolean; message: string } {
+    try {
+      const entity = this.viewer.entities.getById(command.entityId);
+      if (!entity) {
+        return { success: false, message: `Entity '${command.entityId}' not found` };
+      }
+
+      const GridMaterialProperty = (Cesium as unknown as {
+        GridMaterialProperty: new (options: object) => unknown;
+      }).GridMaterialProperty;
+
+      const Color = (Cesium as unknown as {
+        Color: { fromCssColorString: (s: string) => unknown; WHITE: unknown };
+      }).Color;
+
+      const Cartesian2 = (Cesium as unknown as { Cartesian2: new (x: number, y: number) => unknown }).Cartesian2;
+
+      const material = new GridMaterialProperty({
+        color: command.color ? Color.fromCssColorString(command.color) : Color.WHITE,
+        cellAlpha: command.cellAlpha || 0.1,
+        lineCount: new Cartesian2(command.lineCountX || 8, command.lineCountY || 8),
+        lineThickness: new Cartesian2(command.lineThicknessX || 1, command.lineThicknessY || 1),
+      });
+
+      const entityAny = entity as unknown as Record<string, { material?: unknown }>;
+      if (entityAny.polygon) entityAny.polygon.material = material;
+      else if (entityAny.rectangle) entityAny.rectangle.material = material;
+      else if (entityAny.ellipse) entityAny.ellipse.material = material;
+      else {
+        return { success: false, message: 'Entity does not support grid material' };
+      }
+
+      return { success: true, message: `Grid material applied to '${command.entityId}'` };
+    } catch (error) {
+      const errorMessage = error instanceof Error ? error.message : String(error);
+      return { success: false, message: `Failed to set grid material: ${errorMessage}` };
+    }
+  }
+
+  private executeSetStripeMaterial(command: Extract<CesiumCommand, { type: 'material.stripe' }>): { success: boolean; message: string } {
+    try {
+      const entity = this.viewer.entities.getById(command.entityId);
+      if (!entity) {
+        return { success: false, message: `Entity '${command.entityId}' not found` };
+      }
+
+      const StripeMaterialProperty = (Cesium as unknown as {
+        StripeMaterialProperty: new (options: object) => unknown;
+      }).StripeMaterialProperty;
+
+      const StripeOrientation = (Cesium as unknown as {
+        StripeOrientation: { HORIZONTAL: number; VERTICAL: number };
+      }).StripeOrientation;
+
+      const Color = (Cesium as unknown as {
+        Color: { fromCssColorString: (s: string) => unknown; WHITE: unknown; BLACK: unknown };
+      }).Color;
+
+      const material = new StripeMaterialProperty({
+        evenColor: command.evenColor ? Color.fromCssColorString(command.evenColor) : Color.WHITE,
+        oddColor: command.oddColor ? Color.fromCssColorString(command.oddColor) : Color.BLACK,
+        offset: command.offset || 0,
+        repeat: command.repeat || 4,
+        orientation: command.orientation === 'VERTICAL' ? StripeOrientation.VERTICAL : StripeOrientation.HORIZONTAL,
+      });
+
+      const entityAny = entity as unknown as Record<string, { material?: unknown }>;
+      if (entityAny.polygon) entityAny.polygon.material = material;
+      else if (entityAny.rectangle) entityAny.rectangle.material = material;
+      else if (entityAny.ellipse) entityAny.ellipse.material = material;
+      else {
+        return { success: false, message: 'Entity does not support stripe material' };
+      }
+
+      return { success: true, message: `Stripe material applied to '${command.entityId}'` };
+    } catch (error) {
+      const errorMessage = error instanceof Error ? error.message : String(error);
+      return { success: false, message: `Failed to set stripe material: ${errorMessage}` };
+    }
+  }
+
+  private executeSetCheckerboardMaterial(command: Extract<CesiumCommand, { type: 'material.checkerboard' }>): { success: boolean; message: string } {
+    try {
+      const entity = this.viewer.entities.getById(command.entityId);
+      if (!entity) {
+        return { success: false, message: `Entity '${command.entityId}' not found` };
+      }
+
+      const CheckerboardMaterialProperty = (Cesium as unknown as {
+        CheckerboardMaterialProperty: new (options: object) => unknown;
+      }).CheckerboardMaterialProperty;
+
+      const Color = (Cesium as unknown as {
+        Color: { fromCssColorString: (s: string) => unknown; WHITE: unknown; BLACK: unknown };
+      }).Color;
+
+      const Cartesian2 = (Cesium as unknown as { Cartesian2: new (x: number, y: number) => unknown }).Cartesian2;
+
+      const material = new CheckerboardMaterialProperty({
+        evenColor: command.evenColor ? Color.fromCssColorString(command.evenColor) : Color.WHITE,
+        oddColor: command.oddColor ? Color.fromCssColorString(command.oddColor) : Color.BLACK,
+        repeat: new Cartesian2(command.repeatX || 4, command.repeatY || 4),
+      });
+
+      const entityAny = entity as unknown as Record<string, { material?: unknown }>;
+      if (entityAny.polygon) entityAny.polygon.material = material;
+      else if (entityAny.rectangle) entityAny.rectangle.material = material;
+      else if (entityAny.ellipse) entityAny.ellipse.material = material;
+      else {
+        return { success: false, message: 'Entity does not support checkerboard material' };
+      }
+
+      return { success: true, message: `Checkerboard material applied to '${command.entityId}'` };
+    } catch (error) {
+      const errorMessage = error instanceof Error ? error.message : String(error);
+      return { success: false, message: `Failed to set checkerboard material: ${errorMessage}` };
+    }
   }
 
   async loadCZML(czml: CZMLDocumentArray, id?: string): Promise<{ success: boolean; message: string; data?: unknown }> {

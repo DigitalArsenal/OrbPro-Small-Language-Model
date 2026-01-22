@@ -404,6 +404,435 @@ const tools = {
     description: 'Stop an active orbit animation',
     inputSchema: z.object({}),
   },
+  addBillboard: {
+    name: 'addBillboard',
+    description: 'Add an image marker (billboard) at a location that always faces the camera',
+    inputSchema: z.object({
+      longitude: z.number().min(-180).max(180),
+      latitude: z.number().min(-90).max(90),
+      image: z.string().describe('URL to the image file'),
+      name: z.string().optional().describe('Name for the billboard'),
+      scale: z.number().positive().optional().describe('Scale factor for the image (default: 1)'),
+    }),
+  },
+  setView: {
+    name: 'setView',
+    description: 'Instantly set the camera position and orientation without animation',
+    inputSchema: z.object({
+      longitude: z.number().min(-180).max(180).describe('Longitude in degrees'),
+      latitude: z.number().min(-90).max(90).describe('Latitude in degrees'),
+      height: z.number().positive().describe('Camera height in meters'),
+      heading: z.number().optional().describe('Camera heading in degrees (0 = north, 90 = east)'),
+      pitch: z.number().optional().describe('Camera pitch in degrees (0 = horizontal, -90 = looking down)'),
+      roll: z.number().optional().describe('Camera roll in degrees'),
+    }),
+  },
+  getCamera: {
+    name: 'getCamera',
+    description: 'Get the current camera position and orientation',
+    inputSchema: z.object({}),
+  },
+  selectEntity: {
+    name: 'selectEntity',
+    description: 'Select an entity to highlight it and show its info box',
+    inputSchema: z.object({
+      entityId: z.string().describe('ID or name of the entity to select'),
+    }),
+  },
+  listEntities: {
+    name: 'listEntities',
+    description: 'Get a list of all entities currently in the scene',
+    inputSchema: z.object({}),
+  },
+  loadGeoJSON: {
+    name: 'loadGeoJSON',
+    description: 'Load GeoJSON data from a URL',
+    inputSchema: z.object({
+      url: z.string().describe('URL to the GeoJSON file'),
+      name: z.string().optional().describe('Name for the data source'),
+      clampToGround: z.boolean().optional().describe('Clamp features to terrain (default: true)'),
+      stroke: colorSchema.optional().describe('Line/outline color'),
+      fill: colorSchema.optional().describe('Fill color for polygons'),
+      strokeWidth: z.number().positive().optional().describe('Line width in pixels'),
+    }),
+  },
+  loadKML: {
+    name: 'loadKML',
+    description: 'Load KML or KMZ data from a URL',
+    inputSchema: z.object({
+      url: z.string().describe('URL to the KML or KMZ file'),
+      name: z.string().optional().describe('Name for the data source'),
+      clampToGround: z.boolean().optional().describe('Clamp features to terrain'),
+    }),
+  },
+  setFog: {
+    name: 'setFog',
+    description: 'Enable or configure atmospheric fog effect',
+    inputSchema: z.object({
+      enabled: z.boolean().describe('Enable or disable fog'),
+      density: z.number().min(0).max(1).optional().describe('Fog density (0 to 1, default: 0.0001)'),
+    }),
+  },
+  setShadows: {
+    name: 'setShadows',
+    description: 'Enable or disable shadows in the scene',
+    inputSchema: z.object({
+      enabled: z.boolean().describe('Enable or disable shadows'),
+      softShadows: z.boolean().optional().describe('Use soft shadows (default: true)'),
+    }),
+  },
+  rotateCamera: {
+    name: 'rotateCamera',
+    description: 'Rotate the camera heading, pitch, or roll relative to its current orientation',
+    inputSchema: z.object({
+      heading: z.number().optional().describe('Change in heading in degrees (positive = clockwise)'),
+      pitch: z.number().optional().describe('Change in pitch in degrees (positive = look up)'),
+      roll: z.number().optional().describe('Change in roll in degrees'),
+    }),
+  },
+  loadCZML: {
+    name: 'loadCZML',
+    description: 'Load CZML data from a URL',
+    inputSchema: z.object({
+      url: z.string().describe('URL to the CZML file'),
+      name: z.string().optional().describe('Name for the data source'),
+    }),
+  },
+  getEntityInfo: {
+    name: 'getEntityInfo',
+    description: 'Get detailed information about a specific entity',
+    inputSchema: z.object({
+      entityId: z.string().describe('ID or name of the entity'),
+    }),
+  },
+  setAnimationSpeed: {
+    name: 'setAnimationSpeed',
+    description: 'Set the time multiplier for animation playback',
+    inputSchema: z.object({
+      multiplier: z.number().describe('Time multiplier (1 = real-time, 10 = 10x speed, -1 = reverse)'),
+    }),
+  },
+  removeImagery: {
+    name: 'removeImagery',
+    description: 'Remove an imagery layer by its index',
+    inputSchema: z.object({
+      index: z.number().int().min(0).describe('Index of the imagery layer to remove'),
+    }),
+  },
+  setImageryAlpha: {
+    name: 'setImageryAlpha',
+    description: 'Set the transparency of an imagery layer',
+    inputSchema: z.object({
+      index: z.number().int().min(0).describe('Index of the imagery layer'),
+      alpha: z.number().min(0).max(1).describe('Transparency value (0 = invisible, 1 = opaque)'),
+    }),
+  },
+  setLighting: {
+    name: 'setLighting',
+    description: 'Configure scene lighting (sun position and globe lighting)',
+    inputSchema: z.object({
+      enableLighting: z.boolean().optional().describe('Enable globe lighting based on sun position'),
+      sunPosition: z.object({
+        longitude: z.number().min(-180).max(180),
+        latitude: z.number().min(-90).max(90),
+      }).optional().describe('Sun position (defaults to current simulation time)'),
+    }),
+  },
+  setAtmosphere: {
+    name: 'setAtmosphere',
+    description: 'Configure the sky atmosphere appearance',
+    inputSchema: z.object({
+      show: z.boolean().optional().describe('Show or hide the sky atmosphere'),
+      brightnessShift: z.number().min(-1).max(1).optional().describe('Brightness shift (-1 to 1)'),
+      hueShift: z.number().min(-1).max(1).optional().describe('Hue shift (-1 to 1)'),
+      saturationShift: z.number().min(-1).max(1).optional().describe('Saturation shift (-1 to 1)'),
+    }),
+  },
+  setGlobe: {
+    name: 'setGlobe',
+    description: 'Configure globe visibility and appearance',
+    inputSchema: z.object({
+      show: z.boolean().optional().describe('Show or hide the globe'),
+      showGroundAtmosphere: z.boolean().optional().describe('Show atmosphere at ground level'),
+      enableLighting: z.boolean().optional().describe('Enable lighting on the globe'),
+      baseColor: colorSchema.optional().describe('Globe base color when no imagery'),
+    }),
+  },
+  loadGPX: {
+    name: 'loadGPX',
+    description: 'Load GPX track data from a URL',
+    inputSchema: z.object({
+      url: z.string().describe('URL to the GPX file'),
+      name: z.string().optional().describe('Name for the data source'),
+      clampToGround: z.boolean().optional().describe('Clamp track to terrain'),
+    }),
+  },
+  setImageryBrightness: {
+    name: 'setImageryBrightness',
+    description: 'Set brightness, contrast, and saturation of an imagery layer',
+    inputSchema: z.object({
+      index: z.number().int().min(0).describe('Index of the imagery layer'),
+      brightness: z.number().min(0).max(3).optional().describe('Brightness (1 = normal)'),
+      contrast: z.number().min(0).max(3).optional().describe('Contrast (1 = normal)'),
+      saturation: z.number().min(0).max(3).optional().describe('Saturation (1 = normal)'),
+      gamma: z.number().min(0).max(3).optional().describe('Gamma (1 = normal)'),
+    }),
+  },
+  addWMS: {
+    name: 'addWMS',
+    description: 'Add a WMS (Web Map Service) imagery layer',
+    inputSchema: z.object({
+      url: z.string().describe('WMS service URL'),
+      layers: z.string().describe('Comma-separated list of WMS layers'),
+      name: z.string().optional().describe('Name for the layer'),
+    }),
+  },
+  measureDistance: {
+    name: 'measureDistance',
+    description: 'Calculate the distance between two points',
+    inputSchema: z.object({
+      start: positionSchema.describe('Starting point'),
+      end: positionSchema.describe('Ending point'),
+    }),
+  },
+  sampleTerrainHeight: {
+    name: 'sampleTerrainHeight',
+    description: 'Get the terrain elevation at a specific location',
+    inputSchema: z.object({
+      longitude: z.number().min(-180).max(180),
+      latitude: z.number().min(-90).max(90),
+    }),
+  },
+  enableDepthTest: {
+    name: 'enableDepthTest',
+    description: 'Enable or disable depth testing against terrain',
+    inputSchema: z.object({
+      enabled: z.boolean().describe('Enable depth testing'),
+    }),
+  },
+  addGlowingPolyline: {
+    name: 'addGlowingPolyline',
+    description: 'Draw a glowing line connecting multiple points',
+    inputSchema: z.object({
+      positions: z.array(positionSchema).min(2).describe('Array of positions'),
+      name: z.string().optional(),
+      color: colorSchema.optional(),
+      width: z.number().positive().optional(),
+      glowPower: z.number().min(0).max(1).optional().describe('Glow intensity (0 to 1, default: 0.25)'),
+    }),
+  },
+  addDashedPolyline: {
+    name: 'addDashedPolyline',
+    description: 'Draw a dashed line connecting multiple points',
+    inputSchema: z.object({
+      positions: z.array(positionSchema).min(2).describe('Array of positions'),
+      name: z.string().optional(),
+      color: colorSchema.optional(),
+      width: z.number().positive().optional(),
+      dashLength: z.number().positive().optional().describe('Length of dashes in pixels (default: 16)'),
+    }),
+  },
+  addArrowPolyline: {
+    name: 'addArrowPolyline',
+    description: 'Draw a line with an arrow at the end',
+    inputSchema: z.object({
+      positions: z.array(positionSchema).min(2).describe('Array of positions'),
+      name: z.string().optional(),
+      color: colorSchema.optional(),
+      width: z.number().positive().optional(),
+    }),
+  },
+  addOutlinedPolyline: {
+    name: 'addOutlinedPolyline',
+    description: 'Draw a line with an outline',
+    inputSchema: z.object({
+      positions: z.array(positionSchema).min(2).describe('Array of positions'),
+      name: z.string().optional(),
+      color: colorSchema.optional(),
+      outlineColor: colorSchema.optional(),
+      width: z.number().positive().optional(),
+      outlineWidth: z.number().positive().optional().describe('Width of outline in pixels'),
+    }),
+  },
+  enableFXAA: {
+    name: 'enableFXAA',
+    description: 'Enable or disable Fast Approximate Anti-Aliasing (FXAA)',
+    inputSchema: z.object({
+      enabled: z.boolean().describe('Enable FXAA anti-aliasing'),
+    }),
+  },
+  setBloom: {
+    name: 'setBloom',
+    description: 'Configure bloom post-processing effect for bright objects',
+    inputSchema: z.object({
+      enabled: z.boolean().describe('Enable bloom effect'),
+      brightness: z.number().min(0).max(2).optional().describe('Bloom brightness (default: 0.3)'),
+      contrast: z.number().min(0).max(2).optional().describe('Bloom contrast (default: 128)'),
+      glowOnly: z.boolean().optional().describe('Show only the glow without base image'),
+    }),
+  },
+  getScreenPosition: {
+    name: 'getScreenPosition',
+    description: 'Convert geographic coordinates to screen pixel coordinates',
+    inputSchema: z.object({
+      longitude: z.number().min(-180).max(180),
+      latitude: z.number().min(-90).max(90),
+      height: z.number().optional().describe('Height in meters'),
+    }),
+  },
+  getCartographic: {
+    name: 'getCartographic',
+    description: 'Convert screen coordinates to geographic lat/lon/height',
+    inputSchema: z.object({
+      x: z.number().describe('Screen X coordinate in pixels'),
+      y: z.number().describe('Screen Y coordinate in pixels'),
+    }),
+  },
+  splitImagery: {
+    name: 'splitImagery',
+    description: 'Enable split-screen comparison between two imagery layers',
+    inputSchema: z.object({
+      enabled: z.boolean().describe('Enable split screen mode'),
+      position: z.number().min(0).max(1).optional().describe('Split position (0-1, default: 0.5)'),
+    }),
+  },
+  pickEntity: {
+    name: 'pickEntity',
+    description: 'Get the entity at a given screen position',
+    inputSchema: z.object({
+      x: z.number().describe('Screen X coordinate in pixels'),
+      y: z.number().describe('Screen Y coordinate in pixels'),
+    }),
+  },
+  setSkybox: {
+    name: 'setSkybox',
+    description: 'Set the skybox background images',
+    inputSchema: z.object({
+      show: z.boolean().describe('Show or hide the skybox'),
+    }),
+  },
+  highlight3DTile: {
+    name: 'highlight3DTile',
+    description: 'Highlight features in a 3D tileset by changing their color',
+    inputSchema: z.object({
+      id: z.string().describe('ID of the tileset'),
+      featureId: z.number().optional().describe('Specific feature ID to highlight'),
+      color: colorSchema.optional().describe('Highlight color'),
+    }),
+  },
+  clip3DTiles: {
+    name: 'clip3DTiles',
+    description: 'Add clipping planes to a 3D tileset to cut through buildings or terrain',
+    inputSchema: z.object({
+      id: z.string().describe('ID of the tileset to clip'),
+      enabled: z.boolean().describe('Enable or disable clipping'),
+      planeNormal: z.object({
+        x: z.number(),
+        y: z.number(),
+        z: z.number(),
+      }).optional().describe('Clipping plane normal direction (default: horizontal cut)'),
+      distance: z.number().optional().describe('Distance from origin along normal (default: 0)'),
+    }),
+  },
+  clipTerrain: {
+    name: 'clipTerrain',
+    description: 'Add clipping planes to terrain to create cutaway views',
+    inputSchema: z.object({
+      enabled: z.boolean().describe('Enable or disable terrain clipping'),
+      positions: z.array(positionSchema).min(3).optional().describe('Polygon vertices defining the clipping area'),
+      height: z.number().optional().describe('Height of the clipping plane'),
+    }),
+  },
+  addParticleSystem: {
+    name: 'addParticleSystem',
+    description: 'Add a particle system for fire, smoke, or explosion effects',
+    inputSchema: z.object({
+      id: z.string().describe('Unique ID for the particle system'),
+      longitude: z.number().min(-180).max(180),
+      latitude: z.number().min(-90).max(90),
+      height: z.number().optional().describe('Height above ground in meters'),
+      particleType: z.enum(['fire', 'smoke', 'explosion', 'custom']).describe('Type of particle effect'),
+      emissionRate: z.number().positive().optional().describe('Particles per second (default: 50)'),
+      lifetime: z.number().positive().optional().describe('Particle lifetime in seconds (default: 5)'),
+      startColor: colorSchema.optional().describe('Starting color of particles'),
+      endColor: colorSchema.optional().describe('Ending color of particles'),
+      startScale: z.number().positive().optional().describe('Initial particle scale'),
+      endScale: z.number().positive().optional().describe('Final particle scale'),
+    }),
+  },
+  addWeatherEffect: {
+    name: 'addWeatherEffect',
+    description: 'Add weather effects like rain, snow, or fog',
+    inputSchema: z.object({
+      effectType: z.enum(['rain', 'snow', 'fog']).describe('Type of weather effect'),
+      intensity: z.number().min(0).max(1).optional().describe('Effect intensity (0-1, default: 0.5)'),
+    }),
+  },
+  addVolumetricCloud: {
+    name: 'addVolumetricCloud',
+    description: 'Add a 3D volumetric cloud at a location',
+    inputSchema: z.object({
+      id: z.string().describe('Unique ID for the cloud'),
+      longitude: z.number().min(-180).max(180),
+      latitude: z.number().min(-90).max(90),
+      height: z.number().optional().describe('Cloud height in meters (default: 2000)'),
+      scale: z.number().positive().optional().describe('Cloud scale (default: 1)'),
+    }),
+  },
+  addLensFlare: {
+    name: 'addLensFlare',
+    description: 'Enable or disable lens flare effect from the sun',
+    inputSchema: z.object({
+      enabled: z.boolean().describe('Enable lens flare effect'),
+      intensity: z.number().min(0).max(2).optional().describe('Flare intensity (default: 1)'),
+    }),
+  },
+  setImageMaterial: {
+    name: 'setImageMaterial',
+    description: 'Apply an image/texture material to an entity (polygon, rectangle, ellipse, etc.)',
+    inputSchema: z.object({
+      entityId: z.string().describe('ID of the entity to apply material to'),
+      imageUrl: z.string().describe('URL of the image texture'),
+      repeatX: z.number().positive().optional().describe('Horizontal repeat count (default: 1)'),
+      repeatY: z.number().positive().optional().describe('Vertical repeat count (default: 1)'),
+    }),
+  },
+  setGridMaterial: {
+    name: 'setGridMaterial',
+    description: 'Apply a grid pattern material to an entity',
+    inputSchema: z.object({
+      entityId: z.string().describe('ID of the entity to apply material to'),
+      color: colorSchema.optional().describe('Grid line color (default: white)'),
+      cellAlpha: z.number().min(0).max(1).optional().describe('Cell transparency (default: 0.1)'),
+      lineCountX: z.number().positive().optional().describe('Number of horizontal lines (default: 8)'),
+      lineCountY: z.number().positive().optional().describe('Number of vertical lines (default: 8)'),
+      lineThicknessX: z.number().positive().optional().describe('Horizontal line thickness (default: 1)'),
+      lineThicknessY: z.number().positive().optional().describe('Vertical line thickness (default: 1)'),
+    }),
+  },
+  setStripeMaterial: {
+    name: 'setStripeMaterial',
+    description: 'Apply a stripe pattern material to an entity',
+    inputSchema: z.object({
+      entityId: z.string().describe('ID of the entity to apply material to'),
+      evenColor: colorSchema.optional().describe('Even stripe color (default: white)'),
+      oddColor: colorSchema.optional().describe('Odd stripe color (default: black)'),
+      offset: z.number().optional().describe('Stripe offset (default: 0)'),
+      repeat: z.number().positive().optional().describe('Number of stripes (default: 4)'),
+      orientation: z.enum(['HORIZONTAL', 'VERTICAL']).optional().describe('Stripe orientation (default: HORIZONTAL)'),
+    }),
+  },
+  setCheckerboardMaterial: {
+    name: 'setCheckerboardMaterial',
+    description: 'Apply a checkerboard pattern material to an entity',
+    inputSchema: z.object({
+      entityId: z.string().describe('ID of the entity to apply material to'),
+      evenColor: colorSchema.optional().describe('Even square color (default: white)'),
+      oddColor: colorSchema.optional().describe('Odd square color (default: black)'),
+      repeatX: z.number().positive().optional().describe('Horizontal repeat count (default: 4)'),
+      repeatY: z.number().positive().optional().describe('Vertical repeat count (default: 4)'),
+    }),
+  },
 };
 
 type ToolName = keyof typeof tools;
@@ -1065,6 +1494,521 @@ export class CesiumMCPServer {
       case 'stopOrbit': {
         // This requires direct access to the executor - return a special action
         return { success: true, message: 'Stop orbit requested', data: { action: 'stopOrbit' } };
+      }
+
+      case 'addBillboard': {
+        const args = input as ToolInput<'addBillboard'>;
+        const entity = czmlGenerator.createBillboard(
+          { longitude: args.longitude, latitude: args.latitude },
+          args.image,
+          { name: args.name, scale: args.scale }
+        );
+        const command: CesiumCommand = {
+          type: 'entity.add',
+          entity,
+        };
+        return this.commandHandler(command);
+      }
+
+      case 'setView': {
+        const args = input as ToolInput<'setView'>;
+        const command: CesiumCommand = {
+          type: 'camera.setView',
+          destination: {
+            longitude: args.longitude,
+            latitude: args.latitude,
+            height: args.height,
+          },
+          orientation: (args.heading !== undefined || args.pitch !== undefined || args.roll !== undefined) ? {
+            heading: args.heading !== undefined ? args.heading * Math.PI / 180 : undefined,
+            pitch: args.pitch !== undefined ? args.pitch * Math.PI / 180 : undefined,
+            roll: args.roll !== undefined ? args.roll * Math.PI / 180 : undefined,
+          } : undefined,
+        };
+        return this.commandHandler(command);
+      }
+
+      case 'getCamera': {
+        const command: CesiumCommand = { type: 'camera.get' };
+        return this.commandHandler(command);
+      }
+
+      case 'selectEntity': {
+        const args = input as ToolInput<'selectEntity'>;
+        const command: CesiumCommand = {
+          type: 'entity.select',
+          entityId: args.entityId,
+        };
+        return this.commandHandler(command);
+      }
+
+      case 'listEntities': {
+        const command: CesiumCommand = { type: 'entity.list' };
+        return this.commandHandler(command);
+      }
+
+      case 'loadGeoJSON': {
+        const args = input as ToolInput<'loadGeoJSON'>;
+        const command: CesiumCommand = {
+          type: 'data.loadGeoJSON',
+          url: args.url,
+          name: args.name,
+          clampToGround: args.clampToGround,
+          stroke: args.stroke,
+          fill: args.fill,
+          strokeWidth: args.strokeWidth,
+        };
+        return this.commandHandler(command);
+      }
+
+      case 'loadKML': {
+        const args = input as ToolInput<'loadKML'>;
+        const command: CesiumCommand = {
+          type: 'data.loadKML',
+          url: args.url,
+          name: args.name,
+          clampToGround: args.clampToGround,
+        };
+        return this.commandHandler(command);
+      }
+
+      case 'setFog': {
+        const args = input as ToolInput<'setFog'>;
+        const command: CesiumCommand = {
+          type: 'scene.fog',
+          enabled: args.enabled,
+          density: args.density,
+        };
+        return this.commandHandler(command);
+      }
+
+      case 'setShadows': {
+        const args = input as ToolInput<'setShadows'>;
+        const command: CesiumCommand = {
+          type: 'scene.shadows',
+          enabled: args.enabled,
+          softShadows: args.softShadows,
+        };
+        return this.commandHandler(command);
+      }
+
+      case 'rotateCamera': {
+        const args = input as ToolInput<'rotateCamera'>;
+        const command: CesiumCommand = {
+          type: 'camera.rotate',
+          heading: args.heading !== undefined ? args.heading * Math.PI / 180 : undefined,
+          pitch: args.pitch !== undefined ? args.pitch * Math.PI / 180 : undefined,
+          roll: args.roll !== undefined ? args.roll * Math.PI / 180 : undefined,
+        };
+        return this.commandHandler(command);
+      }
+
+      case 'loadCZML': {
+        const args = input as ToolInput<'loadCZML'>;
+        const command: CesiumCommand = {
+          type: 'data.loadCZML',
+          url: args.url,
+          name: args.name,
+        };
+        return this.commandHandler(command);
+      }
+
+      case 'getEntityInfo': {
+        const args = input as ToolInput<'getEntityInfo'>;
+        const command: CesiumCommand = {
+          type: 'entity.getInfo',
+          entityId: args.entityId,
+        };
+        return this.commandHandler(command);
+      }
+
+      case 'setAnimationSpeed': {
+        const args = input as ToolInput<'setAnimationSpeed'>;
+        const command: CesiumCommand = {
+          type: 'time.speed',
+          multiplier: args.multiplier,
+        };
+        return this.commandHandler(command);
+      }
+
+      case 'removeImagery': {
+        const args = input as ToolInput<'removeImagery'>;
+        const command: CesiumCommand = {
+          type: 'imagery.remove',
+          index: args.index,
+        };
+        return this.commandHandler(command);
+      }
+
+      case 'setImageryAlpha': {
+        const args = input as ToolInput<'setImageryAlpha'>;
+        const command: CesiumCommand = {
+          type: 'imagery.alpha',
+          index: args.index,
+          alpha: args.alpha,
+        };
+        return this.commandHandler(command);
+      }
+
+      case 'setLighting': {
+        const args = input as ToolInput<'setLighting'>;
+        const command: CesiumCommand = {
+          type: 'scene.lighting',
+          enableLighting: args.enableLighting,
+          sunPosition: args.sunPosition,
+        };
+        return this.commandHandler(command);
+      }
+
+      case 'setAtmosphere': {
+        const args = input as ToolInput<'setAtmosphere'>;
+        const command: CesiumCommand = {
+          type: 'scene.atmosphere',
+          show: args.show,
+          brightnessShift: args.brightnessShift,
+          hueShift: args.hueShift,
+          saturationShift: args.saturationShift,
+        };
+        return this.commandHandler(command);
+      }
+
+      case 'setGlobe': {
+        const args = input as ToolInput<'setGlobe'>;
+        const command: CesiumCommand = {
+          type: 'scene.globe',
+          show: args.show,
+          showGroundAtmosphere: args.showGroundAtmosphere,
+          enableLighting: args.enableLighting,
+          baseColor: args.baseColor,
+        };
+        return this.commandHandler(command);
+      }
+
+      case 'loadGPX': {
+        const args = input as ToolInput<'loadGPX'>;
+        const command: CesiumCommand = {
+          type: 'data.loadGPX',
+          url: args.url,
+          name: args.name,
+          clampToGround: args.clampToGround,
+        };
+        return this.commandHandler(command);
+      }
+
+      case 'setImageryBrightness': {
+        const args = input as ToolInput<'setImageryBrightness'>;
+        const command: CesiumCommand = {
+          type: 'imagery.brightness',
+          index: args.index,
+          brightness: args.brightness,
+          contrast: args.contrast,
+          saturation: args.saturation,
+          gamma: args.gamma,
+        };
+        return this.commandHandler(command);
+      }
+
+      case 'addWMS': {
+        const args = input as ToolInput<'addWMS'>;
+        const command: CesiumCommand = {
+          type: 'imagery.addWMS',
+          url: args.url,
+          layers: args.layers,
+          name: args.name,
+        };
+        return this.commandHandler(command);
+      }
+
+      case 'measureDistance': {
+        const args = input as ToolInput<'measureDistance'>;
+        const command: CesiumCommand = {
+          type: 'measure.distance',
+          start: args.start as CartographicPosition,
+          end: args.end as CartographicPosition,
+        };
+        return this.commandHandler(command);
+      }
+
+      case 'sampleTerrainHeight': {
+        const args = input as ToolInput<'sampleTerrainHeight'>;
+        const command: CesiumCommand = {
+          type: 'terrain.sample',
+          longitude: args.longitude,
+          latitude: args.latitude,
+        };
+        return this.commandHandler(command);
+      }
+
+      case 'enableDepthTest': {
+        const args = input as ToolInput<'enableDepthTest'>;
+        const command: CesiumCommand = {
+          type: 'scene.depthTest',
+          enabled: args.enabled,
+        };
+        return this.commandHandler(command);
+      }
+
+      case 'addGlowingPolyline': {
+        const args = input as ToolInput<'addGlowingPolyline'>;
+        const entity = czmlGenerator.createGlowingPolyline(
+          args.positions as CartographicPosition[],
+          { name: args.name, color: args.color, width: args.width, glowPower: args.glowPower }
+        );
+        const command: CesiumCommand = {
+          type: 'entity.add',
+          entity,
+        };
+        return this.commandHandler(command);
+      }
+
+      case 'addDashedPolyline': {
+        const args = input as ToolInput<'addDashedPolyline'>;
+        const entity = czmlGenerator.createDashedPolyline(
+          args.positions as CartographicPosition[],
+          { name: args.name, color: args.color, width: args.width, dashLength: args.dashLength }
+        );
+        const command: CesiumCommand = {
+          type: 'entity.add',
+          entity,
+        };
+        return this.commandHandler(command);
+      }
+
+      case 'addArrowPolyline': {
+        const args = input as ToolInput<'addArrowPolyline'>;
+        const entity = czmlGenerator.createArrowPolyline(
+          args.positions as CartographicPosition[],
+          { name: args.name, color: args.color, width: args.width }
+        );
+        const command: CesiumCommand = {
+          type: 'entity.add',
+          entity,
+        };
+        return this.commandHandler(command);
+      }
+
+      case 'addOutlinedPolyline': {
+        const args = input as ToolInput<'addOutlinedPolyline'>;
+        const entity = czmlGenerator.createOutlinedPolyline(
+          args.positions as CartographicPosition[],
+          { name: args.name, color: args.color, outlineColor: args.outlineColor, width: args.width, outlineWidth: args.outlineWidth }
+        );
+        const command: CesiumCommand = {
+          type: 'entity.add',
+          entity,
+        };
+        return this.commandHandler(command);
+      }
+
+      case 'enableFXAA': {
+        const args = input as ToolInput<'enableFXAA'>;
+        const command: CesiumCommand = {
+          type: 'scene.fxaa',
+          enabled: args.enabled,
+        };
+        return this.commandHandler(command);
+      }
+
+      case 'setBloom': {
+        const args = input as ToolInput<'setBloom'>;
+        const command: CesiumCommand = {
+          type: 'scene.bloom',
+          enabled: args.enabled,
+          brightness: args.brightness,
+          contrast: args.contrast,
+          glowOnly: args.glowOnly,
+        };
+        return this.commandHandler(command);
+      }
+
+      case 'getScreenPosition': {
+        const args = input as ToolInput<'getScreenPosition'>;
+        const command: CesiumCommand = {
+          type: 'pick.screenPosition',
+          longitude: args.longitude,
+          latitude: args.latitude,
+          height: args.height,
+        };
+        return this.commandHandler(command);
+      }
+
+      case 'getCartographic': {
+        const args = input as ToolInput<'getCartographic'>;
+        const command: CesiumCommand = {
+          type: 'pick.cartographic',
+          x: args.x,
+          y: args.y,
+        };
+        return this.commandHandler(command);
+      }
+
+      case 'splitImagery': {
+        const args = input as ToolInput<'splitImagery'>;
+        const command: CesiumCommand = {
+          type: 'imagery.split',
+          enabled: args.enabled,
+          position: args.position,
+        };
+        return this.commandHandler(command);
+      }
+
+      case 'pickEntity': {
+        const args = input as ToolInput<'pickEntity'>;
+        const command: CesiumCommand = {
+          type: 'pick.entity',
+          x: args.x,
+          y: args.y,
+        };
+        return this.commandHandler(command);
+      }
+
+      case 'setSkybox': {
+        const args = input as ToolInput<'setSkybox'>;
+        const command: CesiumCommand = {
+          type: 'scene.skybox',
+          show: args.show,
+        };
+        return this.commandHandler(command);
+      }
+
+      case 'highlight3DTile': {
+        const args = input as ToolInput<'highlight3DTile'>;
+        const command: CesiumCommand = {
+          type: 'tiles3d.highlight',
+          id: args.id,
+          featureId: args.featureId,
+          color: args.color,
+        };
+        return this.commandHandler(command);
+      }
+
+      case 'clip3DTiles': {
+        const args = input as ToolInput<'clip3DTiles'>;
+        const command: CesiumCommand = {
+          type: 'tiles3d.clip',
+          id: args.id,
+          enabled: args.enabled,
+          planeNormal: args.planeNormal,
+          distance: args.distance,
+        };
+        return this.commandHandler(command);
+      }
+
+      case 'clipTerrain': {
+        const args = input as ToolInput<'clipTerrain'>;
+        const command: CesiumCommand = {
+          type: 'terrain.clip',
+          enabled: args.enabled,
+          positions: args.positions?.map(p => ({ longitude: p.longitude, latitude: p.latitude })),
+          height: args.height,
+        };
+        return this.commandHandler(command);
+      }
+
+      case 'addParticleSystem': {
+        const args = input as ToolInput<'addParticleSystem'>;
+        const command: CesiumCommand = {
+          type: 'particles.add',
+          id: args.id,
+          longitude: args.longitude,
+          latitude: args.latitude,
+          height: args.height,
+          particleType: args.particleType,
+          emissionRate: args.emissionRate,
+          lifetime: args.lifetime,
+          startColor: args.startColor,
+          endColor: args.endColor,
+          startScale: args.startScale,
+          endScale: args.endScale,
+        };
+        return this.commandHandler(command);
+      }
+
+      case 'addWeatherEffect': {
+        const args = input as ToolInput<'addWeatherEffect'>;
+        const command: CesiumCommand = {
+          type: 'weather.add',
+          effectType: args.effectType,
+          intensity: args.intensity,
+        };
+        return this.commandHandler(command);
+      }
+
+      case 'addVolumetricCloud': {
+        const args = input as ToolInput<'addVolumetricCloud'>;
+        const command: CesiumCommand = {
+          type: 'clouds.add',
+          id: args.id,
+          longitude: args.longitude,
+          latitude: args.latitude,
+          height: args.height,
+          scale: args.scale,
+        };
+        return this.commandHandler(command);
+      }
+
+      case 'addLensFlare': {
+        const args = input as ToolInput<'addLensFlare'>;
+        const command: CesiumCommand = {
+          type: 'effects.lensFlare',
+          enabled: args.enabled,
+          intensity: args.intensity,
+        };
+        return this.commandHandler(command);
+      }
+
+      case 'setImageMaterial': {
+        const args = input as ToolInput<'setImageMaterial'>;
+        const command: CesiumCommand = {
+          type: 'material.image',
+          entityId: args.entityId,
+          imageUrl: args.imageUrl,
+          repeatX: args.repeatX,
+          repeatY: args.repeatY,
+        };
+        return this.commandHandler(command);
+      }
+
+      case 'setGridMaterial': {
+        const args = input as ToolInput<'setGridMaterial'>;
+        const command: CesiumCommand = {
+          type: 'material.grid',
+          entityId: args.entityId,
+          color: args.color,
+          cellAlpha: args.cellAlpha,
+          lineCountX: args.lineCountX,
+          lineCountY: args.lineCountY,
+          lineThicknessX: args.lineThicknessX,
+          lineThicknessY: args.lineThicknessY,
+        };
+        return this.commandHandler(command);
+      }
+
+      case 'setStripeMaterial': {
+        const args = input as ToolInput<'setStripeMaterial'>;
+        const command: CesiumCommand = {
+          type: 'material.stripe',
+          entityId: args.entityId,
+          evenColor: args.evenColor,
+          oddColor: args.oddColor,
+          offset: args.offset,
+          repeat: args.repeat,
+          orientation: args.orientation,
+        };
+        return this.commandHandler(command);
+      }
+
+      case 'setCheckerboardMaterial': {
+        const args = input as ToolInput<'setCheckerboardMaterial'>;
+        const command: CesiumCommand = {
+          type: 'material.checkerboard',
+          entityId: args.entityId,
+          evenColor: args.evenColor,
+          oddColor: args.oddColor,
+          repeatX: args.repeatX,
+          repeatY: args.repeatY,
+        };
+        return this.commandHandler(command);
       }
 
       default:

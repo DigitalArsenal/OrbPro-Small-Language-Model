@@ -218,6 +218,296 @@ export interface SetTerrainExaggerationCommand {
   relativeHeight?: number;
 }
 
+export interface CameraSetViewCommand {
+  type: 'camera.setView';
+  destination: CartographicPosition;
+  orientation?: {
+    heading?: number;  // radians
+    pitch?: number;    // radians
+    roll?: number;     // radians
+  };
+}
+
+export interface CameraGetCommand {
+  type: 'camera.get';
+}
+
+export interface SelectEntityCommand {
+  type: 'entity.select';
+  entityId: string;
+}
+
+export interface ListEntitiesCommand {
+  type: 'entity.list';
+}
+
+export interface GetEntityInfoCommand {
+  type: 'entity.getInfo';
+  entityId: string;
+}
+
+export interface LoadGeoJSONCommand {
+  type: 'data.loadGeoJSON';
+  url: string;
+  name?: string;
+  clampToGround?: boolean;
+  stroke?: string;
+  fill?: string;
+  strokeWidth?: number;
+}
+
+export interface LoadKMLCommand {
+  type: 'data.loadKML';
+  url: string;
+  name?: string;
+  clampToGround?: boolean;
+}
+
+export interface LoadCZMLCommand {
+  type: 'data.loadCZML';
+  url: string;
+  name?: string;
+}
+
+export interface SetFogCommand {
+  type: 'scene.fog';
+  enabled: boolean;
+  density?: number;
+}
+
+export interface SetShadowsCommand {
+  type: 'scene.shadows';
+  enabled: boolean;
+  softShadows?: boolean;
+}
+
+export interface SetAnimationSpeedCommand {
+  type: 'time.speed';
+  multiplier: number;
+}
+
+export interface RemoveImageryCommand {
+  type: 'imagery.remove';
+  index: number;
+}
+
+export interface SetImageryAlphaCommand {
+  type: 'imagery.alpha';
+  index: number;
+  alpha: number;
+}
+
+export interface SetImageryBrightnessCommand {
+  type: 'imagery.brightness';
+  index: number;
+  brightness?: number;
+  contrast?: number;
+  saturation?: number;
+  gamma?: number;
+}
+
+export interface AddWMSCommand {
+  type: 'imagery.addWMS';
+  url: string;
+  layers: string;
+  name?: string;
+}
+
+export interface SetLightingCommand {
+  type: 'scene.lighting';
+  enableLighting?: boolean;
+  sunPosition?: CartographicPosition;
+}
+
+export interface SetAtmosphereCommand {
+  type: 'scene.atmosphere';
+  show?: boolean;
+  brightnessShift?: number;
+  hueShift?: number;
+  saturationShift?: number;
+}
+
+export interface SetGlobeCommand {
+  type: 'scene.globe';
+  show?: boolean;
+  showGroundAtmosphere?: boolean;
+  enableLighting?: boolean;
+  baseColor?: string;
+}
+
+export interface LoadGPXCommand {
+  type: 'data.loadGPX';
+  url: string;
+  name?: string;
+  clampToGround?: boolean;
+}
+
+export interface MeasureDistanceCommand {
+  type: 'measure.distance';
+  start: CartographicPosition;
+  end: CartographicPosition;
+}
+
+export interface SampleTerrainCommand {
+  type: 'terrain.sample';
+  longitude: number;
+  latitude: number;
+}
+
+export interface SetDepthTestCommand {
+  type: 'scene.depthTest';
+  enabled: boolean;
+}
+
+export interface EnableFXAACommand {
+  type: 'scene.fxaa';
+  enabled: boolean;
+}
+
+export interface SetBloomCommand {
+  type: 'scene.bloom';
+  enabled: boolean;
+  brightness?: number;
+  contrast?: number;
+  glowOnly?: boolean;
+}
+
+export interface GetScreenPositionCommand {
+  type: 'pick.screenPosition';
+  longitude: number;
+  latitude: number;
+  height?: number;
+}
+
+export interface GetCartographicCommand {
+  type: 'pick.cartographic';
+  x: number;
+  y: number;
+}
+
+export interface SplitImageryCommand {
+  type: 'imagery.split';
+  enabled: boolean;
+  position?: number;
+}
+
+export interface PickEntityCommand {
+  type: 'pick.entity';
+  x: number;
+  y: number;
+}
+
+export interface SetSkyboxCommand {
+  type: 'scene.skybox';
+  show: boolean;
+}
+
+export interface Highlight3DTileCommand {
+  type: 'tiles3d.highlight';
+  id: string;
+  featureId?: number;
+  color?: string;
+}
+
+export interface Clip3DTilesCommand {
+  type: 'tiles3d.clip';
+  id: string;
+  enabled: boolean;
+  /** Clipping plane normal direction */
+  planeNormal?: { x: number; y: number; z: number };
+  /** Distance from origin along normal */
+  distance?: number;
+}
+
+export interface ClipTerrainCommand {
+  type: 'terrain.clip';
+  enabled: boolean;
+  /** Clipping plane positions (polygon vertices) */
+  positions?: Array<{ longitude: number; latitude: number }>;
+  /** Height of the clipping plane */
+  height?: number;
+}
+
+export interface AddParticleSystemCommand {
+  type: 'particles.add';
+  id: string;
+  longitude: number;
+  latitude: number;
+  height?: number;
+  particleType: 'fire' | 'smoke' | 'explosion' | 'custom';
+  /** Emission rate in particles per second */
+  emissionRate?: number;
+  /** Particle lifetime in seconds */
+  lifetime?: number;
+  /** Start color */
+  startColor?: string;
+  /** End color */
+  endColor?: string;
+  /** Start scale */
+  startScale?: number;
+  /** End scale */
+  endScale?: number;
+}
+
+export interface AddWeatherEffectCommand {
+  type: 'weather.add';
+  effectType: 'rain' | 'snow' | 'fog';
+  intensity?: number;
+}
+
+export interface AddVolumetricCloudCommand {
+  type: 'clouds.add';
+  id: string;
+  longitude: number;
+  latitude: number;
+  height?: number;
+  scale?: number;
+}
+
+export interface AddLensFlareCommand {
+  type: 'effects.lensFlare';
+  enabled: boolean;
+  intensity?: number;
+}
+
+export interface SetImageMaterialCommand {
+  type: 'material.image';
+  entityId: string;
+  imageUrl: string;
+  repeatX?: number;
+  repeatY?: number;
+}
+
+export interface SetGridMaterialCommand {
+  type: 'material.grid';
+  entityId: string;
+  color?: string;
+  cellAlpha?: number;
+  lineCountX?: number;
+  lineCountY?: number;
+  lineThicknessX?: number;
+  lineThicknessY?: number;
+}
+
+export interface SetStripeMaterialCommand {
+  type: 'material.stripe';
+  entityId: string;
+  evenColor?: string;
+  oddColor?: string;
+  offset?: number;
+  repeat?: number;
+  orientation?: 'HORIZONTAL' | 'VERTICAL';
+}
+
+export interface SetCheckerboardMaterialCommand {
+  type: 'material.checkerboard';
+  entityId: string;
+  evenColor?: string;
+  oddColor?: string;
+  repeatX?: number;
+  repeatY?: number;
+}
+
 // Aggregate command type
 export type CesiumCommand =
   | CameraFlyToCommand
@@ -227,23 +517,63 @@ export type CesiumCommand =
   | CameraOrbitCommand
   | CameraTrackCommand
   | CameraCinematicFlightCommand
+  | CameraSetViewCommand
+  | CameraGetCommand
   | AddEntityCommand
   | RemoveEntityCommand
   | UpdateEntityCommand
   | FlyToEntityCommand
   | ShowEntityCommand
   | HideEntityCommand
+  | SelectEntityCommand
+  | ListEntitiesCommand
+  | GetEntityInfoCommand
   | AddImageryCommand
+  | RemoveImageryCommand
+  | SetImageryAlphaCommand
+  | SetImageryBrightnessCommand
+  | AddWMSCommand
   | ToggleLayerCommand
   | SetTimeCommand
   | PlayTimeCommand
   | PauseTimeCommand
+  | SetAnimationSpeedCommand
   | SetSceneMode
+  | SetFogCommand
+  | SetShadowsCommand
+  | SetLightingCommand
+  | SetAtmosphereCommand
+  | SetGlobeCommand
+  | SetDepthTestCommand
   | SetTerrainCommand
   | Add3DTilesCommand
   | Remove3DTilesCommand
   | Style3DTilesCommand
-  | SetTerrainExaggerationCommand;
+  | SetTerrainExaggerationCommand
+  | LoadGeoJSONCommand
+  | LoadKMLCommand
+  | LoadCZMLCommand
+  | LoadGPXCommand
+  | MeasureDistanceCommand
+  | SampleTerrainCommand
+  | EnableFXAACommand
+  | SetBloomCommand
+  | GetScreenPositionCommand
+  | GetCartographicCommand
+  | SplitImageryCommand
+  | PickEntityCommand
+  | SetSkyboxCommand
+  | Highlight3DTileCommand
+  | Clip3DTilesCommand
+  | ClipTerrainCommand
+  | AddParticleSystemCommand
+  | AddWeatherEffectCommand
+  | AddVolumetricCloudCommand
+  | AddLensFlareCommand
+  | SetImageMaterialCommand
+  | SetGridMaterialCommand
+  | SetStripeMaterialCommand
+  | SetCheckerboardMaterialCommand;
 
 // CZML Types
 export interface CZMLPacket {

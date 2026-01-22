@@ -83,6 +83,79 @@ export function createSolidColorMaterial(color: CZMLColor): CZMLMaterial {
   return { solidColor: { color } };
 }
 
+export function createPolylineGlowMaterial(color: CZMLColor, glowPower: number = 0.25): CZMLMaterial {
+  return { polylineGlow: { color, glowPower } };
+}
+
+export function createPolylineDashMaterial(color: CZMLColor, dashLength: number = 16, dashPattern: number = 255): CZMLMaterial {
+  return { polylineDash: { color, dashLength, dashPattern } };
+}
+
+export function createPolylineArrowMaterial(color: CZMLColor): CZMLMaterial {
+  return { polylineArrow: { color } };
+}
+
+export function createPolylineOutlineMaterial(color: CZMLColor, outlineColor: CZMLColor, outlineWidth: number = 2): CZMLMaterial {
+  return { polylineOutline: { color, outlineColor, outlineWidth } };
+}
+
+export function createImageMaterial(imageUrl: string, repeatX: number = 1, repeatY: number = 1): CZMLMaterial {
+  return {
+    image: {
+      image: { uri: imageUrl },
+      repeat: { cartesian2: [repeatX, repeatY] },
+    },
+  };
+}
+
+export function createGridMaterial(
+  color: CZMLColor,
+  cellAlpha: number = 0.1,
+  lineCount: { x: number; y: number } = { x: 8, y: 8 },
+  lineThickness: { x: number; y: number } = { x: 1, y: 1 }
+): CZMLMaterial {
+  return {
+    grid: {
+      color,
+      cellAlpha,
+      lineCount: { cartesian2: [lineCount.x, lineCount.y] },
+      lineThickness: { cartesian2: [lineThickness.x, lineThickness.y] },
+    },
+  } as CZMLMaterial;
+}
+
+export function createStripeMaterial(
+  evenColor: CZMLColor,
+  oddColor: CZMLColor,
+  offset: number = 0,
+  repeat: number = 4,
+  orientation: 'HORIZONTAL' | 'VERTICAL' = 'HORIZONTAL'
+): CZMLMaterial {
+  return {
+    stripe: {
+      evenColor,
+      oddColor,
+      offset,
+      repeat,
+      orientation,
+    },
+  } as CZMLMaterial;
+}
+
+export function createCheckerboardMaterial(
+  evenColor: CZMLColor,
+  oddColor: CZMLColor,
+  repeat: { x: number; y: number } = { x: 4, y: 4 }
+): CZMLMaterial {
+  return {
+    checkerboard: {
+      evenColor,
+      oddColor,
+      repeat: { cartesian2: [repeat.x, repeat.y] },
+    },
+  } as CZMLMaterial;
+}
+
 export function createPoint(
   position: CartographicPosition,
   options?: {
@@ -179,6 +252,7 @@ export function createPolyline(
     color?: string;
     width?: number;
     clampToGround?: boolean;
+    material?: CZMLMaterial;
   }
 ): CZMLPacket {
   const coords: number[] = [];
@@ -192,13 +266,79 @@ export function createPolyline(
     polyline: {
       positions: { cartographicDegrees: coords },
       width: options?.width || 3,
-      material: createSolidColorMaterial(
+      material: options?.material || createSolidColorMaterial(
         createColorFromName(options?.color || 'blue')
       ),
       clampToGround: options?.clampToGround ?? true,
       show: true,
     },
   };
+}
+
+export function createGlowingPolyline(
+  positions: CartographicPosition[],
+  options?: {
+    id?: string;
+    name?: string;
+    color?: string;
+    width?: number;
+    glowPower?: number;
+    clampToGround?: boolean;
+  }
+): CZMLPacket {
+  const color = createColorFromName(options?.color || 'cyan');
+  const material = createPolylineGlowMaterial(color, options?.glowPower || 0.25);
+  return createPolyline(positions, { ...options, material });
+}
+
+export function createDashedPolyline(
+  positions: CartographicPosition[],
+  options?: {
+    id?: string;
+    name?: string;
+    color?: string;
+    width?: number;
+    dashLength?: number;
+    dashPattern?: number;
+    clampToGround?: boolean;
+  }
+): CZMLPacket {
+  const color = createColorFromName(options?.color || 'yellow');
+  const material = createPolylineDashMaterial(color, options?.dashLength || 16, options?.dashPattern || 255);
+  return createPolyline(positions, { ...options, material });
+}
+
+export function createArrowPolyline(
+  positions: CartographicPosition[],
+  options?: {
+    id?: string;
+    name?: string;
+    color?: string;
+    width?: number;
+    clampToGround?: boolean;
+  }
+): CZMLPacket {
+  const color = createColorFromName(options?.color || 'red');
+  const material = createPolylineArrowMaterial(color);
+  return createPolyline(positions, { ...options, material, width: options?.width || 10 });
+}
+
+export function createOutlinedPolyline(
+  positions: CartographicPosition[],
+  options?: {
+    id?: string;
+    name?: string;
+    color?: string;
+    outlineColor?: string;
+    width?: number;
+    outlineWidth?: number;
+    clampToGround?: boolean;
+  }
+): CZMLPacket {
+  const color = createColorFromName(options?.color || 'white');
+  const outlineColor = createColorFromName(options?.outlineColor || 'black');
+  const material = createPolylineOutlineMaterial(color, outlineColor, options?.outlineWidth || 2);
+  return createPolyline(positions, { ...options, material });
 }
 
 export function createPolygon(

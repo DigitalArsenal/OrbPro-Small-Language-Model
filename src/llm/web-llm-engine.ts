@@ -308,6 +308,8 @@ export class WebLLMEngine {
       const functionName = fgMatch[1];
       const paramsStr = fgMatch[2];
 
+      if (!functionName || paramsStr === undefined) continue;
+
       // Parse key:value pairs from FunctionGemma format
       const args: Record<string, unknown> = {};
       const paramPairs = paramsStr.split(',').map(p => p.trim()).filter(p => p);
