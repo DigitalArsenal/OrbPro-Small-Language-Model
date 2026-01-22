@@ -13,3 +13,6 @@ export type { ModelSelectorConfig } from './model-selector';
 
 export { VoiceInput, VoiceInputButton } from './voice-input';
 export type { VoiceInputConfig, VoiceInputEvents, VoiceInputButtonConfig } from './voice-input';
+
+export { Autocomplete, LOCATIONS as AutocompleteLocations, COMMANDS as AutocompleteCommands } from './autocomplete';
+export type { AutocompleteOption, AutocompleteConfig } from './autocomplete';
