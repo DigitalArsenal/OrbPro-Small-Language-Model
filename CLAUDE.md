@@ -1,4 +1,4 @@
-# Claude Code Instructions for OrbPro2-ModSim
+# Claude Code Instructions for ORBPRO2 SLM
 
 ## CRITICAL: File System Boundaries
 

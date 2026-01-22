@@ -34,37 +34,36 @@ export class ModelSelector {
     const html = `
       <div class="model-selector">
         <h3 class="model-selector-title">Select Language Model</h3>
-        <p class="model-selector-desc">Choose a model based on your device capabilities. Smaller models are faster but less capable.</p>
+        <p class="model-selector-desc">Choose a model based on your device capabilities.</p>
 
-        <div class="model-categories">
-          <div class="model-category">
-            <h4>Small (Fast, ~500MB-2GB)</h4>
-            <div class="model-list">
-              ${RECOMMENDED_MODELS.small.map(model => this.renderModelOption(model, 'small')).join('')}
+        <div class="model-categories-scroll">
+          <div class="model-categories">
+            <div class="model-category">
+              <h4>Small (Fast, ~500MB-2GB)</h4>
+              <div class="model-list">
+                ${RECOMMENDED_MODELS.small.map(model => this.renderModelOption(model, 'small')).join('')}
+              </div>
             </div>
-          </div>
 
-          <div class="model-category">
-            <h4>Medium (Balanced, ~2-4GB)</h4>
-            <div class="model-list">
-              ${RECOMMENDED_MODELS.medium.map(model => this.renderModelOption(model, 'medium')).join('')}
+            <div class="model-category">
+              <h4>Medium (Balanced, ~2-4GB)</h4>
+              <div class="model-list">
+                ${RECOMMENDED_MODELS.medium.map(model => this.renderModelOption(model, 'medium')).join('')}
+              </div>
             </div>
-          </div>
 
-          <div class="model-category">
-            <h4>Large (Powerful, ~4-8GB)</h4>
-            <div class="model-list">
-              ${RECOMMENDED_MODELS.large.map(model => this.renderModelOption(model, 'large')).join('')}
+            <div class="model-category">
+              <h4>Large (Powerful, ~4-8GB)</h4>
+              <div class="model-list">
+                ${RECOMMENDED_MODELS.large.map(model => this.renderModelOption(model, 'large')).join('')}
+              </div>
             </div>
           </div>
         </div>
 
-        <div class="model-selector-actions">
+        <div class="model-selector-footer">
           <button class="model-load-btn" id="model-load-btn">Load Selected Model</button>
-        </div>
-
-        <div class="model-selector-note">
-          <strong>Note:</strong> Models are downloaded and cached in your browser. First load may take a while depending on your connection speed.
+          <div class="model-selector-note">Models are cached in browser after first download.</div>
         </div>
       </div>
     `;
@@ -161,31 +160,42 @@ export class ModelSelector {
     style.id = 'model-selector-styles';
     style.textContent = `
       .model-selector {
-        padding: 24px;
+        display: flex;
+        flex-direction: column;
+        height: 100%;
         background: #1a1a2e;
-        border-radius: 12px;
         color: #e0e0e0;
         font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
-        max-width: 800px;
-        margin: 0 auto;
+        overflow: hidden;
       }
 
       .model-selector-title {
-        margin: 0 0 8px 0;
-        font-size: 1.5em;
+        flex-shrink: 0;
+        margin: 0 0 4px 0;
+        padding: 12px 12px 0;
+        font-size: 1.2em;
         color: white;
       }
 
       .model-selector-desc {
-        margin: 0 0 20px 0;
+        flex-shrink: 0;
+        margin: 0;
+        padding: 0 12px 8px;
         color: #9ca3af;
-        font-size: 0.95em;
+        font-size: 0.85em;
+      }
+
+      .model-categories-scroll {
+        flex: 1;
+        min-height: 0;
+        overflow-y: auto;
+        padding: 0 12px;
       }
 
       .model-categories {
         display: flex;
         flex-direction: column;
-        gap: 20px;
+        gap: 16px;
       }
 
       .model-category h4 {
@@ -243,13 +253,16 @@ export class ModelSelector {
         color: #9ca3af;
       }
 
-      .model-selector-actions {
-        margin-top: 24px;
-        text-align: center;
+      .model-selector-footer {
+        flex-shrink: 0;
+        padding: 12px;
+        background: #16162a;
+        border-top: 1px solid #2d2d4a;
       }
 
       .model-load-btn {
-        padding: 14px 32px;
+        width: 100%;
+        padding: 12px 24px;
         background: linear-gradient(135deg, #818cf8, #6366f1);
         color: white;
         border: none;
@@ -261,21 +274,14 @@ export class ModelSelector {
       }
 
       .model-load-btn:hover {
-        transform: translateY(-2px);
         box-shadow: 0 4px 20px rgba(129, 140, 248, 0.4);
       }
 
       .model-selector-note {
-        margin-top: 20px;
-        padding: 12px 16px;
-        background: #2d2d4a;
-        border-radius: 6px;
-        font-size: 0.85em;
-        color: #9ca3af;
-      }
-
-      .model-selector-note strong {
-        color: #fbbf24;
+        margin-top: 8px;
+        font-size: 0.75em;
+        color: #6b7280;
+        text-align: center;
       }
     `;
 

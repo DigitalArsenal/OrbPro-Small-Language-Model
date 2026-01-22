@@ -1,0 +1,141 @@
+[
+  {
+    "id": "document",
+    "name": "Flight Path Demo",
+    "version": "1.0",
+    "clock": {
+      "interval": "2024-01-01T08:00:00Z/2024-01-01T14:00:00Z",
+      "currentTime": "2024-01-01T08:00:00Z",
+      "multiplier": 300,
+      "range": "LOOP_STOP",
+      "step": "SYSTEM_CLOCK_MULTIPLIER"
+    }
+  },
+  {
+    "id": "aircraft-flight",
+    "name": "New York to Los Angeles",
+    "description": "Commercial flight path from JFK to LAX",
+    "model": {
+      "gltf": "https://cesium.com/downloads/cesiumjs/releases/1.124/Build/Cesium/Widgets/Images/Cesium_Logo_Color.svg",
+      "scale": 1.0,
+      "minimumPixelSize": 32
+    },
+    "billboard": {
+      "image": "data:image/svg+xml;base64,PHN2ZyB4bWxucz0iaHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmciIHdpZHRoPSIzMiIgaGVpZ2h0PSIzMiIgdmlld0JveD0iMCAwIDI0IDI0IiBmaWxsPSJub25lIiBzdHJva2U9IndoaXRlIiBzdHJva2Utd2lkdGg9IjIiPjxwYXRoIGQ9Ik0yMiAyTDExIDEzIi8+PHBhdGggZD0iTTIyIDJMMTUgMjJMMTEgMTNMMiA5TDIyIDJaIi8+PC9zdmc+",
+      "scale": 1.0,
+      "show": true
+    },
+    "label": {
+      "fillColor": {
+        "rgba": [255, 255, 255, 255]
+      },
+      "font": "12pt sans-serif",
+      "horizontalOrigin": "LEFT",
+      "outlineColor": {
+        "rgba": [0, 0, 0, 255]
+      },
+      "outlineWidth": 2,
+      "pixelOffset": {
+        "cartesian2": [20, 0]
+      },
+      "show": true,
+      "style": "FILL_AND_OUTLINE",
+      "text": "Flight AA100",
+      "verticalOrigin": "CENTER"
+    },
+    "path": {
+      "material": {
+        "polylineGlow": {
+          "color": {
+            "rgba": [0, 191, 255, 255]
+          },
+          "glowPower": 0.2
+        }
+      },
+      "width": 4,
+      "leadTime": 0,
+      "trailTime": 21600,
+      "resolution": 60
+    },
+    "position": {
+      "interpolationAlgorithm": "LAGRANGE",
+      "interpolationDegree": 2,
+      "epoch": "2024-01-01T08:00:00Z",
+      "cartographicDegrees": [
+        0, -73.7781, 40.6413, 10000,
+        3600, -79.0, 41.5, 11000,
+        7200, -85.0, 41.0, 11500,
+        10800, -92.0, 39.5, 11500,
+        14400, -100.0, 37.5, 11500,
+        18000, -110.0, 35.5, 11000,
+        21600, -118.4085, 33.9425, 3000
+      ]
+    }
+  },
+  {
+    "id": "jfk-airport",
+    "name": "JFK Airport",
+    "description": "John F. Kennedy International Airport",
+    "position": {
+      "cartographicDegrees": [-73.7781, 40.6413, 0]
+    },
+    "point": {
+      "color": {
+        "rgba": [0, 255, 0, 255]
+      },
+      "pixelSize": 12,
+      "outlineColor": {
+        "rgba": [255, 255, 255, 255]
+      },
+      "outlineWidth": 2
+    },
+    "label": {
+      "text": "JFK",
+      "font": "bold 14pt sans-serif",
+      "fillColor": {
+        "rgba": [255, 255, 255, 255]
+      },
+      "outlineColor": {
+        "rgba": [0, 0, 0, 255]
+      },
+      "outlineWidth": 2,
+      "style": "FILL_AND_OUTLINE",
+      "pixelOffset": {
+        "cartesian2": [0, -20]
+      }
+    }
+  },
+  {
+    "id": "lax-airport",
+    "name": "LAX Airport",
+    "description": "Los Angeles International Airport",
+    "position": {
+      "cartographicDegrees": [-118.4085, 33.9425, 0]
+    },
+    "point": {
+      "color": {
+        "rgba": [255, 0, 0, 255]
+      },
+      "pixelSize": 12,
+      "outlineColor": {
+        "rgba": [255, 255, 255, 255]
+      },
+      "outlineWidth": 2
+    },
+    "label": {
+      "text": "LAX",
+      "font": "bold 14pt sans-serif",
+      "fillColor": {
+        "rgba": [255, 255, 255, 255]
+      },
+      "outlineColor": {
+        "rgba": [0, 0, 0, 255]
+      },
+      "outlineWidth": 2,
+      "style": "FILL_AND_OUTLINE",
+      "pixelOffset": {
+        "cartesian2": [0, -20]
+      }
+    }
+  }
+]

@@ -17,7 +17,7 @@ import type { CesiumCommand } from './cesium/types';
 declare const Cesium: {
   Viewer: new (container: string | HTMLElement, options?: object) => CesiumViewer;
   Ion: { defaultAccessToken: string };
-  createWorldTerrainAsync: () => Promise<unknown>;
+  SkyAtmosphere: new () => unknown;
 };
 
 interface CesiumViewer {
@@ -56,25 +56,40 @@ export class CesiumSLMApp {
     cesiumToken?: string;
   }): Promise<void> {
     // Initialize status display first
-    this.statusDisplay = new StatusDisplay(config.statusContainer);
+    try {
+      this.statusDisplay = new StatusDisplay(config.statusContainer);
+    } catch (error) {
+      throw new Error(`StatusDisplay init failed: ${error instanceof Error ? error.message : error}`);
+    }
 
     // Check WebGPU support
-    const webgpuSupport = await checkWebGPUSupport();
-    this.statusDisplay.updateWebGPU({
-      supported: webgpuSupport.supported,
-      error: webgpuSupport.error,
-    });
+    try {
+      const webgpuSupport = await checkWebGPUSupport();
+      this.statusDisplay.updateWebGPU({
+        supported: webgpuSupport.supported,
+        error: webgpuSupport.error,
+      });
 
-    if (!webgpuSupport.supported) {
-      throw new Error(webgpuSupport.error || 'WebGPU not supported');
+      if (!webgpuSupport.supported) {
+        throw new Error(webgpuSupport.error || 'WebGPU not supported');
+      }
+    } catch (error) {
+      if (error instanceof Error && error.message.includes('WebGPU')) {
+        throw error;
+      }
+      throw new Error(`WebGPU check failed: ${error instanceof Error ? error.message : error}`);
     }
 
     // Initialize model selector
-    this.modelSelector = new ModelSelector({
-      containerId: config.modelSelectorContainer,
-      onSelect: (modelId) => this.loadModel(modelId),
-      defaultModel: RECOMMENDED_MODELS.small[1], // Qwen2.5-1.5B by default
-    });
+    try {
+      this.modelSelector = new ModelSelector({
+        containerId: config.modelSelectorContainer,
+        onSelect: (modelId) => this.loadModel(modelId),
+        defaultModel: RECOMMENDED_MODELS.small[1], // Qwen2.5-1.5B by default
+      });
+    } catch (error) {
+      throw new Error(`ModelSelector init failed: ${error instanceof Error ? error.message : error}`);
+    }
 
     // Initialize CesiumJS
     try {
@@ -83,15 +98,19 @@ export class CesiumSLMApp {
     } catch (error) {
       const message = error instanceof Error ? error.message : 'Failed to initialize CesiumJS';
       this.statusDisplay.updateCesium({ ready: false, error: message });
-      throw error;
+      throw new Error(`CesiumJS init failed: ${message}`);
     }
 
     // Initialize chat interface
-    this.chatInterface = new ChatInterface({
-      containerId: config.chatContainer,
-      onSubmit: (message) => this.handleUserMessage(message),
-      placeholder: 'Type a command (e.g., "Show me Paris" or "Add a red marker at the Eiffel Tower")',
-    });
+    try {
+      this.chatInterface = new ChatInterface({
+        containerId: config.chatContainer,
+        onSubmit: (message) => this.handleUserMessage(message),
+        placeholder: 'Type a command (e.g., "Show me Paris" or "Add a red marker at the Eiffel Tower")',
+      });
+    } catch (error) {
+      throw new Error(`ChatInterface init failed: ${error instanceof Error ? error.message : error}`);
+    }
 
     // Add welcome message
     this.chatInterface.addMessage({
@@ -102,25 +121,31 @@ export class CesiumSLMApp {
   }
 
   private async initializeCesium(containerId: string, token?: string): Promise<void> {
+    // Check if Cesium is loaded
+    if (typeof Cesium === 'undefined') {
+      throw new Error('Cesium is not defined. The CesiumJS library failed to load.');
+    }
+
     // Set Cesium Ion token if provided
     if (token) {
       Cesium.Ion.defaultAccessToken = token;
     }
 
-    // Create the viewer
+    // Simple viewer setup (no Ion token required)
     this.viewer = new Cesium.Viewer(containerId, {
-      terrain: await Cesium.createWorldTerrainAsync(),
-      animation: true,
-      timeline: true,
-      fullscreenButton: true,
-      vrButton: false,
-      geocoder: true,
+      animation: false,
+      timeline: false,
+      baseLayerPicker: false,
+      fullscreenButton: false,
+      geocoder: false,
       homeButton: true,
       infoBox: true,
-      sceneModePicker: true,
+      sceneModePicker: false,
       selectionIndicator: true,
-      navigationHelpButton: true,
-      baseLayerPicker: true,
+      navigationHelpButton: false,
+      creditContainer: document.createElement('div'),
+      skyBox: false,
+      skyAtmosphere: new Cesium.SkyAtmosphere(),
     });
 
     // Create command executor
@@ -151,12 +176,20 @@ export class CesiumSLMApp {
       name: modelId,
     });
 
+    // Detect small models that need compact prompts (< 3B parameters typically have 4k context)
+    const isSmallModel = modelId.includes('0.5B') ||
+                         modelId.includes('360M') ||
+                         modelId.includes('1.5B') ||
+                         modelId.includes('SmolLM2');
+
     try {
       this.llmEngine = new WebLLMEngine({
         modelId,
         temperature: 0.7,
         topP: 0.9,
         maxTokens: 512,
+        // Use compact prompt for small models to fit within context window
+        useCompactPrompt: isSmallModel,
         onProgress: (progress) => {
           this.statusDisplay?.updateModel({
             loading: true,

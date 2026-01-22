@@ -311,6 +311,254 @@ export function createBox(
   };
 }
 
+export function createEllipsoid(
+  position: CartographicPosition,
+  radii: { x: number; y: number; z: number },
+  options?: {
+    id?: string;
+    name?: string;
+    color?: string;
+    fill?: boolean;
+    outline?: boolean;
+    outlineColor?: string;
+    stackPartitions?: number;
+    slicePartitions?: number;
+  }
+): CZMLPacket {
+  return {
+    id: options?.id || generateId('ellipsoid'),
+    name: options?.name || 'Ellipsoid',
+    position: {
+      cartographicDegrees: positionToCartographicDegrees(position),
+    },
+    ellipsoid: {
+      radii: { cartesian: [radii.x, radii.y, radii.z] },
+      fill: options?.fill ?? true,
+      material: createSolidColorMaterial(
+        createColorFromName(options?.color || 'blue')
+      ),
+      outline: options?.outline ?? true,
+      outlineColor: createColorFromName(options?.outlineColor || 'white'),
+      stackPartitions: options?.stackPartitions || 64,
+      slicePartitions: options?.slicePartitions || 64,
+      show: true,
+    },
+  };
+}
+
+export function createSphere(
+  position: CartographicPosition,
+  radius: number,
+  options?: {
+    id?: string;
+    name?: string;
+    color?: string;
+    fill?: boolean;
+    outline?: boolean;
+    outlineColor?: string;
+  }
+): CZMLPacket {
+  return createEllipsoid(position, { x: radius, y: radius, z: radius }, options);
+}
+
+export function createCylinder(
+  position: CartographicPosition,
+  options: {
+    length: number;
+    topRadius: number;
+    bottomRadius: number;
+    id?: string;
+    name?: string;
+    color?: string;
+    fill?: boolean;
+    outline?: boolean;
+    outlineColor?: string;
+    slices?: number;
+  }
+): CZMLPacket {
+  return {
+    id: options?.id || generateId('cylinder'),
+    name: options?.name || 'Cylinder',
+    position: {
+      cartographicDegrees: positionToCartographicDegrees(position),
+    },
+    cylinder: {
+      length: options.length,
+      topRadius: options.topRadius,
+      bottomRadius: options.bottomRadius,
+      fill: options?.fill ?? true,
+      material: createSolidColorMaterial(
+        createColorFromName(options?.color || 'blue')
+      ),
+      outline: options?.outline ?? true,
+      outlineColor: createColorFromName(options?.outlineColor || 'white'),
+      slices: options?.slices || 128,
+      show: true,
+    },
+  };
+}
+
+export function createCone(
+  position: CartographicPosition,
+  options: {
+    length: number;
+    bottomRadius: number;
+    id?: string;
+    name?: string;
+    color?: string;
+  }
+): CZMLPacket {
+  return createCylinder(position, {
+    ...options,
+    topRadius: 0,
+  });
+}
+
+export function createCorridor(
+  positions: CartographicPosition[],
+  width: number,
+  options?: {
+    id?: string;
+    name?: string;
+    color?: string;
+    height?: number;
+    extrudedHeight?: number;
+    cornerType?: 'ROUNDED' | 'MITERED' | 'BEVELED';
+    fill?: boolean;
+    outline?: boolean;
+    outlineColor?: string;
+  }
+): CZMLPacket {
+  const coords: number[] = [];
+  for (const pos of positions) {
+    coords.push(pos.longitude, pos.latitude, pos.height || 0);
+  }
+
+  return {
+    id: options?.id || generateId('corridor'),
+    name: options?.name || 'Corridor',
+    corridor: {
+      positions: { cartographicDegrees: coords },
+      width,
+      height: options?.height || 0,
+      extrudedHeight: options?.extrudedHeight,
+      cornerType: options?.cornerType || 'ROUNDED',
+      fill: options?.fill ?? true,
+      material: createSolidColorMaterial(
+        createColorFromName(options?.color || 'blue')
+      ),
+      outline: options?.outline ?? true,
+      outlineColor: createColorFromName(options?.outlineColor || 'white'),
+      show: true,
+    },
+  };
+}
+
+export function createRectangle(
+  bounds: { west: number; south: number; east: number; north: number },
+  options?: {
+    id?: string;
+    name?: string;
+    color?: string;
+    height?: number;
+    extrudedHeight?: number;
+    rotation?: number;
+    fill?: boolean;
+    outline?: boolean;
+    outlineColor?: string;
+  }
+): CZMLPacket {
+  return {
+    id: options?.id || generateId('rectangle'),
+    name: options?.name || 'Rectangle',
+    rectangle: {
+      coordinates: { wsenDegrees: [bounds.west, bounds.south, bounds.east, bounds.north] },
+      height: options?.height || 0,
+      extrudedHeight: options?.extrudedHeight,
+      rotation: options?.rotation || 0,
+      fill: options?.fill ?? true,
+      material: createSolidColorMaterial(
+        createColorFromName(options?.color || 'blue')
+      ),
+      outline: options?.outline ?? true,
+      outlineColor: createColorFromName(options?.outlineColor || 'white'),
+      show: true,
+    },
+  };
+}
+
+export function createWall(
+  positions: CartographicPosition[],
+  options?: {
+    id?: string;
+    name?: string;
+    color?: string;
+    minimumHeights?: number[];
+    maximumHeights?: number[];
+    fill?: boolean;
+    outline?: boolean;
+    outlineColor?: string;
+  }
+): CZMLPacket {
+  const coords: number[] = [];
+  for (const pos of positions) {
+    coords.push(pos.longitude, pos.latitude, pos.height || 0);
+  }
+
+  return {
+    id: options?.id || generateId('wall'),
+    name: options?.name || 'Wall',
+    wall: {
+      positions: { cartographicDegrees: coords },
+      minimumHeights: options?.minimumHeights,
+      maximumHeights: options?.maximumHeights,
+      fill: options?.fill ?? true,
+      material: createSolidColorMaterial(
+        createColorFromName(options?.color || 'blue')
+      ),
+      outline: options?.outline ?? true,
+      outlineColor: createColorFromName(options?.outlineColor || 'white'),
+      show: true,
+    },
+  };
+}
+
+export function createPolylineVolume(
+  positions: CartographicPosition[],
+  shape: number[],  // 2D shape [x1, y1, x2, y2, ...] defining cross-section
+  options?: {
+    id?: string;
+    name?: string;
+    color?: string;
+    cornerType?: 'ROUNDED' | 'MITERED' | 'BEVELED';
+    fill?: boolean;
+    outline?: boolean;
+    outlineColor?: string;
+  }
+): CZMLPacket {
+  const coords: number[] = [];
+  for (const pos of positions) {
+    coords.push(pos.longitude, pos.latitude, pos.height || 0);
+  }
+
+  return {
+    id: options?.id || generateId('polylineVolume'),
+    name: options?.name || 'Polyline Volume',
+    polylineVolume: {
+      positions: { cartographicDegrees: coords },
+      shape: { cartesian2: shape },
+      cornerType: options?.cornerType || 'ROUNDED',
+      fill: options?.fill ?? true,
+      material: createSolidColorMaterial(
+        createColorFromName(options?.color || 'blue')
+      ),
+      outline: options?.outline ?? true,
+      outlineColor: createColorFromName(options?.outlineColor || 'white'),
+      show: true,
+    },
+  };
+}
+
 export function createModel(
   position: CartographicPosition,
   gltfUrl: string,

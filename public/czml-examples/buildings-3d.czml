@@ -1,0 +1,199 @@
+[
+  {
+    "id": "document",
+    "name": "3D Buildings Demo",
+    "version": "1.0"
+  },
+  {
+    "id": "empire-state",
+    "name": "Empire State Building",
+    "description": "Empire State Building - 443 meters tall",
+    "polygon": {
+      "positions": {
+        "cartographicDegrees": [
+          -73.9857, 40.7484,
+          -73.9853, 40.7484,
+          -73.9853, 40.7488,
+          -73.9857, 40.7488
+        ]
+      },
+      "height": 0,
+      "extrudedHeight": 443,
+      "material": {
+        "solidColor": {
+          "color": {
+            "rgba": [192, 192, 192, 230]
+          }
+        }
+      },
+      "outline": true,
+      "outlineColor": {
+        "rgba": [64, 64, 64, 255]
+      },
+      "outlineWidth": 2
+    },
+    "label": {
+      "text": "Empire State Building",
+      "font": "bold 12pt sans-serif",
+      "fillColor": {
+        "rgba": [255, 255, 255, 255]
+      },
+      "outlineColor": {
+        "rgba": [0, 0, 0, 255]
+      },
+      "outlineWidth": 2,
+      "style": "FILL_AND_OUTLINE",
+      "verticalOrigin": "BOTTOM",
+      "pixelOffset": {
+        "cartesian2": [0, -50]
+      }
+    },
+    "position": {
+      "cartographicDegrees": [-73.9855, 40.7486, 450]
+    }
+  },
+  {
+    "id": "one-wtc",
+    "name": "One World Trade Center",
+    "description": "One World Trade Center - 541 meters tall",
+    "polygon": {
+      "positions": {
+        "cartographicDegrees": [
+          -74.0135, 40.7127,
+          -74.0131, 40.7127,
+          -74.0131, 40.7131,
+          -74.0135, 40.7131
+        ]
+      },
+      "height": 0,
+      "extrudedHeight": 541,
+      "material": {
+        "solidColor": {
+          "color": {
+            "rgba": [100, 149, 237, 230]
+          }
+        }
+      },
+      "outline": true,
+      "outlineColor": {
+        "rgba": [25, 25, 112, 255]
+      },
+      "outlineWidth": 2
+    },
+    "label": {
+      "text": "One WTC",
+      "font": "bold 12pt sans-serif",
+      "fillColor": {
+        "rgba": [255, 255, 255, 255]
+      },
+      "outlineColor": {
+        "rgba": [0, 0, 0, 255]
+      },
+      "outlineWidth": 2,
+      "style": "FILL_AND_OUTLINE",
+      "verticalOrigin": "BOTTOM",
+      "pixelOffset": {
+        "cartesian2": [0, -50]
+      }
+    },
+    "position": {
+      "cartographicDegrees": [-74.0133, 40.7129, 550]
+    }
+  },
+  {
+    "id": "chrysler",
+    "name": "Chrysler Building",
+    "description": "Chrysler Building - 319 meters tall",
+    "polygon": {
+      "positions": {
+        "cartographicDegrees": [
+          -73.9756, 40.7516,
+          -73.9752, 40.7516,
+          -73.9752, 40.7520,
+          -73.9756, 40.7520
+        ]
+      },
+      "height": 0,
+      "extrudedHeight": 319,
+      "material": {
+        "solidColor": {
+          "color": {
+            "rgba": [218, 165, 32, 230]
+          }
+        }
+      },
+      "outline": true,
+      "outlineColor": {
+        "rgba": [139, 69, 19, 255]
+      },
+      "outlineWidth": 2
+    },
+    "label": {
+      "text": "Chrysler Building",
+      "font": "bold 12pt sans-serif",
+      "fillColor": {
+        "rgba": [255, 255, 255, 255]
+      },
+      "outlineColor": {
+        "rgba": [0, 0, 0, 255]
+      },
+      "outlineWidth": 2,
+      "style": "FILL_AND_OUTLINE",
+      "verticalOrigin": "BOTTOM",
+      "pixelOffset": {
+        "cartesian2": [0, -50]
+      }
+    },
+    "position": {
+      "cartographicDegrees": [-73.9754, 40.7518, 325]
+    }
+  },
+  {
+    "id": "rockefeller",
+    "name": "Rockefeller Center",
+    "description": "30 Rockefeller Plaza - 259 meters tall",
+    "polygon": {
+      "positions": {
+        "cartographicDegrees": [
+          -73.9795, 40.7587,
+          -73.9787, 40.7587,
+          -73.9787, 40.7593,
+          -73.9795, 40.7593
+        ]
+      },
+      "height": 0,
+      "extrudedHeight": 259,
+      "material": {
+        "solidColor": {
+          "color": {
+            "rgba": [169, 169, 169, 230]
+          }
+        }
+      },
+      "outline": true,
+      "outlineColor": {
+        "rgba": [105, 105, 105, 255]
+      },
+      "outlineWidth": 2
+    },
+    "label": {
+      "text": "30 Rock",
+      "font": "bold 12pt sans-serif",
+      "fillColor": {
+        "rgba": [255, 255, 255, 255]
+      },
+      "outlineColor": {
+        "rgba": [0, 0, 0, 255]
+      },
+      "outlineWidth": 2,
+      "style": "FILL_AND_OUTLINE",
+      "verticalOrigin": "BOTTOM",
+      "pixelOffset": {
+        "cartesian2": [0, -50]
+      }
+    },
+    "position": {
+      "cartographicDegrees": [-73.9791, 40.7590, 265]
+    }
+  }
+]

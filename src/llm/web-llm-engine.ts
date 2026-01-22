@@ -4,13 +4,17 @@
  */
 
 import type { MLCEngine, ChatCompletionMessageParam } from '@mlc-ai/web-llm';
-import { buildSystemPrompt } from './prompts';
+import { buildSystemPrompt, buildCompactSystemPrompt } from './prompts';
 
 export interface LLMConfig {
   modelId: string;
   temperature?: number;
   topP?: number;
   maxTokens?: number;
+  /** Context window size - increase for longer prompts (default: 16384) */
+  contextWindowSize?: number;
+  /** Use compact system prompt for models with small context windows */
+  useCompactPrompt?: boolean;
   onProgress?: (progress: InitProgressReport) => void;
 }
 
@@ -43,7 +47,7 @@ export interface ToolCall {
 
 // Recommended models for CesiumJS control tasks
 export const RECOMMENDED_MODELS = {
-  // Smaller, faster models
+  // Smaller, faster models - optimized for function calling
   small: [
     'Qwen2.5-0.5B-Instruct-q4f16_1-MLC',
     'Qwen2.5-1.5B-Instruct-q4f16_1-MLC',
@@ -62,7 +66,31 @@ export const RECOMMENDED_MODELS = {
     'Qwen2.5-7B-Instruct-q4f16_1-MLC',
     'Mistral-7B-Instruct-v0.3-q4f16_1-MLC',
   ],
+  // Custom/self-compiled models (add your own after compilation)
+  custom: [] as string[],
 } as const;
+
+// Custom model configurations for self-hosted models
+export interface CustomModelConfig {
+  modelId: string;
+  modelLibUrl: string;  // URL to the .wasm file
+  modelWeightsUrl: string;  // HuggingFace repo URL for weights
+  vramRequired: number;  // MB
+  contextWindowSize: number;
+  tokenizerFiles?: string[];
+}
+
+// Registry for custom models (populate after compiling with scripts/compile-functiongemma.sh)
+export const CUSTOM_MODEL_REGISTRY: Record<string, CustomModelConfig> = {
+  // Example: Add your compiled FunctionGemma here after hosting
+  // 'FunctionGemma-270M-it-q4f16_1-MLC': {
+  //   modelId: 'FunctionGemma-270M-it-q4f16_1-MLC',
+  //   modelLibUrl: 'https://huggingface.co/YOUR_USERNAME/FunctionGemma-270M-it-q4f16_1-MLC/resolve/main/FunctionGemma-270M-it-q4f16_1-MLC.wasm',
+  //   modelWeightsUrl: 'https://huggingface.co/YOUR_USERNAME/FunctionGemma-270M-it-q4f16_1-MLC',
+  //   vramRequired: 512,
+  //   contextWindowSize: 4096,
+  // },
+};
 
 export class WebLLMEngine {
   private engine: MLCEngine | null = null;
@@ -76,6 +104,7 @@ export class WebLLMEngine {
       temperature: 0.7,
       topP: 0.9,
       maxTokens: 512,
+      contextWindowSize: 16384,
       ...config,
     };
   }
@@ -88,17 +117,26 @@ export class WebLLMEngine {
     // Dynamic import to support tree-shaking and lazy loading
     const webllm = await import('@mlc-ai/web-llm');
 
-    this.engine = await webllm.CreateMLCEngine(this.config.modelId, {
-      initProgressCallback: (report) => {
-        if (this.config.onProgress) {
-          this.config.onProgress({
-            progress: report.progress,
-            timeElapsed: report.timeElapsed,
-            text: report.text,
-          });
-        }
+    // Models are automatically cached in browser's Cache API by web-llm
+    // Once downloaded, they persist across page reloads
+    this.engine = await webllm.CreateMLCEngine(
+      this.config.modelId,
+      {
+        initProgressCallback: (report) => {
+          if (this.config.onProgress) {
+            this.config.onProgress({
+              progress: report.progress,
+              timeElapsed: report.timeElapsed,
+              text: report.text,
+            });
+          }
+        },
       },
-    });
+      {
+        // Override default context window to support longer prompts
+        context_window_size: this.config.contextWindowSize,
+      }
+    );
 
     this.isInitialized = true;
   }
@@ -119,8 +157,12 @@ export class WebLLMEngine {
       return;
     }
 
-    // Use the comprehensive prompt builder from prompts.ts
-    this.systemPrompt = buildSystemPrompt(this.tools);
+    // Use compact prompt for small context windows, full prompt otherwise
+    if (this.config.useCompactPrompt) {
+      this.systemPrompt = buildCompactSystemPrompt(this.tools);
+    } else {
+      this.systemPrompt = buildSystemPrompt(this.tools);
+    }
   }
 
   async generate(userMessage: string, conversationHistory?: ChatCompletionMessageParam[]): Promise<LLMResponse> {
@@ -192,7 +234,7 @@ export class WebLLMEngine {
       temperature: this.config.temperature,
       top_p: this.config.topP,
       max_tokens: this.config.maxTokens,
-      stream: true,
+      stream: true as const,
       stream_options: { include_usage: true },
     });
 
@@ -257,6 +299,35 @@ export class WebLLMEngine {
           // Skip invalid JSON
         }
       }
+    }
+
+    // Parse FunctionGemma format: <start_function_call>call:function_name{params}<end_function_call>
+    const functionGemmaRegex = /<start_function_call>call:(\w+)\{([^}]*)\}<end_function_call>/g;
+    let fgMatch;
+    while ((fgMatch = functionGemmaRegex.exec(content)) !== null) {
+      const functionName = fgMatch[1];
+      const paramsStr = fgMatch[2];
+
+      // Parse key:value pairs from FunctionGemma format
+      const args: Record<string, unknown> = {};
+      const paramPairs = paramsStr.split(',').map(p => p.trim()).filter(p => p);
+      for (const pair of paramPairs) {
+        const colonIdx = pair.indexOf(':');
+        if (colonIdx > 0) {
+          const key = pair.substring(0, colonIdx).trim();
+          let value: unknown = pair.substring(colonIdx + 1).trim();
+          // Try to parse as number or boolean
+          if (value === 'true') value = true;
+          else if (value === 'false') value = false;
+          else if (!isNaN(Number(value))) value = Number(value);
+          args[key] = value;
+        }
+      }
+
+      toolCalls.push({
+        name: functionName,
+        arguments: args,
+      });
     }
 
     return toolCalls;

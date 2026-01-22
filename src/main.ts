@@ -26,20 +26,29 @@ document.addEventListener('DOMContentLoaded', async () => {
 
   } catch (error) {
     console.error('Failed to initialize Cesium SLM:', error);
+    // Log full stack trace for debugging
+    if (error instanceof Error && error.stack) {
+      console.error('Stack trace:', error.stack);
+    }
 
     const errorContainer = document.getElementById('error-container');
     if (errorContainer) {
       errorContainer.style.display = 'block';
+      const errorMessage = error instanceof Error ? error.message : 'Unknown error';
+      const errorStack = error instanceof Error && error.stack ? error.stack : '';
+
       errorContainer.innerHTML = `
         <div class="error-message">
           <h2>Initialization Error</h2>
-          <p>${error instanceof Error ? error.message : 'Unknown error'}</p>
+          <p>${errorMessage}</p>
           <p>Please ensure:</p>
           <ul>
             <li>You're using a WebGPU-compatible browser (Chrome 113+ or Edge 113+)</li>
             <li>WebGPU is enabled in your browser settings</li>
             <li>Your GPU supports WebGPU</li>
+            <li>Check the browser console (F12) for more details</li>
           </ul>
+          ${errorStack ? `<details style="margin-top: 16px; color: #9ca3af; font-size: 12px;"><summary>Technical details</summary><pre style="white-space: pre-wrap; margin-top: 8px;">${errorStack}</pre></details>` : ''}
         </div>
       `;
     }

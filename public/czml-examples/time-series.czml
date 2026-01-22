@@ -1,0 +1,169 @@
+[
+  {
+    "id": "document",
+    "name": "Time Series Animation",
+    "version": "1.0",
+    "clock": {
+      "interval": "2024-01-01T00:00:00Z/2024-01-02T00:00:00Z",
+      "currentTime": "2024-01-01T00:00:00Z",
+      "multiplier": 1800,
+      "range": "LOOP_STOP",
+      "step": "SYSTEM_CLOCK_MULTIPLIER"
+    }
+  },
+  {
+    "id": "moving-vehicle",
+    "name": "Delivery Vehicle",
+    "description": "Vehicle making deliveries around San Francisco",
+    "billboard": {
+      "image": "data:image/svg+xml;base64,PHN2ZyB4bWxucz0iaHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmciIHdpZHRoPSIzMiIgaGVpZ2h0PSIzMiIgdmlld0JveD0iMCAwIDI0IDI0IiBmaWxsPSJub25lIiBzdHJva2U9IiM0Mjg1RjQiIHN0cm9rZS13aWR0aD0iMiI+PHJlY3QgeD0iMSIgeT0iMyIgd2lkdGg9IjE1IiBoZWlnaHQ9IjEzIiByeD0iMiIvPjxwYXRoIGQ9Ik0xNiA4aDE1bDMgNXY0YTIgMiAwIDAxLTIgMmgtMTYiLz48Y2lyY2xlIGN4PSI1LjUiIGN5PSIxOC41IiByPSIyLjUiLz48Y2lyY2xlIGN4PSIxOC41IiBjeT0iMTguNSIgcj0iMi41Ii8+PC9zdmc+",
+      "scale": 1.0,
+      "show": true
+    },
+    "label": {
+      "text": "Delivery Truck #42",
+      "font": "11pt sans-serif",
+      "fillColor": {
+        "rgba": [255, 255, 255, 255]
+      },
+      "outlineColor": {
+        "rgba": [0, 0, 0, 255]
+      },
+      "outlineWidth": 2,
+      "style": "FILL_AND_OUTLINE",
+      "horizontalOrigin": "LEFT",
+      "pixelOffset": {
+        "cartesian2": [20, 0]
+      },
+      "show": true
+    },
+    "path": {
+      "material": {
+        "polylineDash": {
+          "color": {
+            "rgba": [66, 133, 244, 255]
+          },
+          "dashLength": 16.0
+        }
+      },
+      "width": 3,
+      "leadTime": 0,
+      "trailTime": 14400,
+      "resolution": 60
+    },
+    "position": {
+      "interpolationAlgorithm": "LAGRANGE",
+      "interpolationDegree": 2,
+      "epoch": "2024-01-01T00:00:00Z",
+      "cartographicDegrees": [
+        0, -122.4194, 37.7749, 50,
+        3600, -122.4089, 37.7849, 50,
+        7200, -122.3969, 37.7949, 50,
+        10800, -122.4109, 37.8049, 50,
+        14400, -122.4229, 37.7949, 50,
+        18000, -122.4349, 37.7849, 50,
+        21600, -122.4269, 37.7649, 50,
+        25200, -122.4149, 37.7549, 50,
+        28800, -122.4029, 37.7649, 50,
+        32400, -122.4194, 37.7749, 50,
+        36000, -122.4334, 37.7849, 50,
+        39600, -122.4454, 37.7749, 50,
+        43200, -122.4574, 37.7649, 50,
+        46800, -122.4454, 37.7549, 50,
+        50400, -122.4334, 37.7449, 50,
+        54000, -122.4194, 37.7549, 50,
+        57600, -122.4074, 37.7649, 50,
+        61200, -122.3954, 37.7749, 50,
+        64800, -122.4074, 37.7849, 50,
+        68400, -122.4194, 37.7949, 50,
+        72000, -122.4314, 37.7849, 50,
+        75600, -122.4194, 37.7749, 50,
+        79200, -122.4074, 37.7649, 50,
+        82800, -122.4194, 37.7549, 50,
+        86400, -122.4194, 37.7749, 50
+      ]
+    }
+  },
+  {
+    "id": "sensor-1",
+    "name": "Temperature Sensor 1",
+    "description": "Downtown temperature sensor with time-varying color",
+    "position": {
+      "cartographicDegrees": [-122.4089, 37.7849, 100]
+    },
+    "point": {
+      "pixelSize": 20,
+      "outlineColor": {
+        "rgba": [0, 0, 0, 255]
+      },
+      "outlineWidth": 2,
+      "color": {
+        "epoch": "2024-01-01T00:00:00Z",
+        "rgba": [
+          0, 0, 0, 255, 255,
+          21600, 0, 100, 255, 255,
+          43200, 255, 200, 0, 255,
+          64800, 255, 100, 0, 255,
+          86400, 0, 0, 255, 255
+        ]
+      }
+    },
+    "label": {
+      "text": "Sensor 1",
+      "font": "10pt sans-serif",
+      "fillColor": {
+        "rgba": [255, 255, 255, 255]
+      },
+      "outlineColor": {
+        "rgba": [0, 0, 0, 255]
+      },
+      "outlineWidth": 2,
+      "style": "FILL_AND_OUTLINE",
+      "verticalOrigin": "BOTTOM",
+      "pixelOffset": {
+        "cartesian2": [0, -15]
+      }
+    }
+  },
+  {
+    "id": "sensor-2",
+    "name": "Temperature Sensor 2",
+    "description": "Marina temperature sensor with time-varying color",
+    "position": {
+      "cartographicDegrees": [-122.4349, 37.8049, 100]
+    },
+    "point": {
+      "pixelSize": 20,
+      "outlineColor": {
+        "rgba": [0, 0, 0, 255]
+      },
+      "outlineWidth": 2,
+      "color": {
+        "epoch": "2024-01-01T00:00:00Z",
+        "rgba": [
+          0, 0, 50, 255, 255,
+          21600, 0, 150, 255, 255,
+          43200, 255, 220, 0, 255,
+          64800, 255, 150, 0, 255,
+          86400, 0, 50, 255, 255
+        ]
+      }
+    },
+    "label": {
+      "text": "Sensor 2",
+      "font": "10pt sans-serif",
+      "fillColor": {
+        "rgba": [255, 255, 255, 255]
+      },
+      "outlineColor": {
+        "rgba": [0, 0, 0, 255]
+      },
+      "outlineWidth": 2,
+      "style": "FILL_AND_OUTLINE",
+      "verticalOrigin": "BOTTOM",
+      "pixelOffset": {
+        "cartesian2": [0, -15]
+      }
+    }
+  }
+]

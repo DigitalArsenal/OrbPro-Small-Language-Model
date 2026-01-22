@@ -246,7 +246,7 @@ export class ChatInterface {
     this.input = document.createElement('textarea');
     this.input.className = 'chat-input';
     this.input.placeholder = config.placeholder || 'Type a command (e.g., "Show me Paris" or "Add a marker at the Eiffel Tower")';
-    this.input.rows = 1;
+    this.input.rows = 4;
 
     this.inputWrapper.appendChild(this.input);
     this.createAutocompleteDropdown();
@@ -711,8 +711,9 @@ export class ChatInterface {
 
       .chat-messages {
         flex: 1;
+        min-height: 0;
         overflow-y: auto;
-        padding: 16px;
+        padding: 12px;
         display: flex;
         flex-direction: column;
         gap: 12px;
@@ -792,9 +793,10 @@ export class ChatInterface {
       }
 
       .chat-input-container {
+        flex-shrink: 0;
         display: flex;
         gap: 8px;
-        padding: 16px;
+        padding: 12px;
         background: #16162a;
         border-top: 1px solid #2d2d4a;
       }

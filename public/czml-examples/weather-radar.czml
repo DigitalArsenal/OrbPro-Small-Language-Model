@@ -1,0 +1,226 @@
+[
+  {
+    "id": "document",
+    "name": "Weather Radar Demo",
+    "version": "1.0",
+    "clock": {
+      "interval": "2024-01-01T00:00:00Z/2024-01-01T06:00:00Z",
+      "currentTime": "2024-01-01T00:00:00Z",
+      "multiplier": 300,
+      "range": "LOOP_STOP",
+      "step": "SYSTEM_CLOCK_MULTIPLIER"
+    }
+  },
+  {
+    "id": "radar-station",
+    "name": "NEXRAD Station",
+    "description": "Weather radar station location",
+    "position": {
+      "cartographicDegrees": [-87.6298, 41.8781, 200]
+    },
+    "point": {
+      "color": {
+        "rgba": [255, 255, 255, 255]
+      },
+      "pixelSize": 12,
+      "outlineColor": {
+        "rgba": [0, 0, 0, 255]
+      },
+      "outlineWidth": 2
+    },
+    "label": {
+      "text": "Radar Station",
+      "font": "bold 12pt sans-serif",
+      "fillColor": {
+        "rgba": [255, 255, 255, 255]
+      },
+      "outlineColor": {
+        "rgba": [0, 0, 0, 255]
+      },
+      "outlineWidth": 2,
+      "style": "FILL_AND_OUTLINE",
+      "verticalOrigin": "BOTTOM",
+      "pixelOffset": {
+        "cartesian2": [0, -15]
+      }
+    }
+  },
+  {
+    "id": "storm-cell-1",
+    "name": "Storm Cell 1",
+    "description": "Active thunderstorm cell",
+    "ellipse": {
+      "semiMajorAxis": 25000,
+      "semiMinorAxis": 18000,
+      "height": 1000,
+      "extrudedHeight": 12000,
+      "rotation": 0.5,
+      "material": {
+        "solidColor": {
+          "color": {
+            "rgba": [255, 0, 0, 150]
+          }
+        }
+      },
+      "outline": true,
+      "outlineColor": {
+        "rgba": [128, 0, 0, 255]
+      }
+    },
+    "position": {
+      "interpolationAlgorithm": "LINEAR",
+      "epoch": "2024-01-01T00:00:00Z",
+      "cartographicDegrees": [
+        0, -87.9, 42.0, 0,
+        7200, -87.7, 41.95, 0,
+        14400, -87.5, 41.9, 0,
+        21600, -87.3, 41.85, 0
+      ]
+    },
+    "label": {
+      "text": "Severe Storm",
+      "font": "bold 11pt sans-serif",
+      "fillColor": {
+        "rgba": [255, 100, 100, 255]
+      },
+      "outlineColor": {
+        "rgba": [0, 0, 0, 255]
+      },
+      "outlineWidth": 2,
+      "style": "FILL_AND_OUTLINE",
+      "verticalOrigin": "BOTTOM",
+      "pixelOffset": {
+        "cartesian2": [0, 20]
+      }
+    }
+  },
+  {
+    "id": "storm-cell-2",
+    "name": "Storm Cell 2",
+    "description": "Moderate rain cell",
+    "ellipse": {
+      "semiMajorAxis": 20000,
+      "semiMinorAxis": 15000,
+      "height": 500,
+      "extrudedHeight": 8000,
+      "rotation": -0.3,
+      "material": {
+        "solidColor": {
+          "color": {
+            "rgba": [255, 165, 0, 120]
+          }
+        }
+      },
+      "outline": true,
+      "outlineColor": {
+        "rgba": [200, 120, 0, 255]
+      }
+    },
+    "position": {
+      "interpolationAlgorithm": "LINEAR",
+      "epoch": "2024-01-01T00:00:00Z",
+      "cartographicDegrees": [
+        0, -88.1, 41.7, 0,
+        7200, -87.9, 41.72, 0,
+        14400, -87.7, 41.74, 0,
+        21600, -87.5, 41.76, 0
+      ]
+    },
+    "label": {
+      "text": "Heavy Rain",
+      "font": "10pt sans-serif",
+      "fillColor": {
+        "rgba": [255, 200, 100, 255]
+      },
+      "outlineColor": {
+        "rgba": [0, 0, 0, 255]
+      },
+      "outlineWidth": 2,
+      "style": "FILL_AND_OUTLINE",
+      "verticalOrigin": "BOTTOM",
+      "pixelOffset": {
+        "cartesian2": [0, 15]
+      }
+    }
+  },
+  {
+    "id": "storm-cell-3",
+    "name": "Storm Cell 3",
+    "description": "Light rain area",
+    "ellipse": {
+      "semiMajorAxis": 35000,
+      "semiMinorAxis": 25000,
+      "height": 200,
+      "extrudedHeight": 5000,
+      "rotation": 0.2,
+      "material": {
+        "solidColor": {
+          "color": {
+            "rgba": [0, 255, 0, 80]
+          }
+        }
+      },
+      "outline": true,
+      "outlineColor": {
+        "rgba": [0, 150, 0, 200]
+      }
+    },
+    "position": {
+      "interpolationAlgorithm": "LINEAR",
+      "epoch": "2024-01-01T00:00:00Z",
+      "cartographicDegrees": [
+        0, -87.4, 41.6, 0,
+        7200, -87.3, 41.65, 0,
+        14400, -87.2, 41.7, 0,
+        21600, -87.1, 41.75, 0
+      ]
+    },
+    "label": {
+      "text": "Light Rain",
+      "font": "10pt sans-serif",
+      "fillColor": {
+        "rgba": [100, 255, 100, 255]
+      },
+      "outlineColor": {
+        "rgba": [0, 0, 0, 255]
+      },
+      "outlineWidth": 2,
+      "style": "FILL_AND_OUTLINE",
+      "verticalOrigin": "BOTTOM",
+      "pixelOffset": {
+        "cartesian2": [0, 15]
+      }
+    }
+  },
+  {
+    "id": "radar-range",
+    "name": "Radar Coverage",
+    "description": "Maximum radar range circle",
+    "position": {
+      "cartographicDegrees": [-87.6298, 41.8781, 0]
+    },
+    "ellipse": {
+      "semiMajorAxis": 150000,
+      "semiMinorAxis": 150000,
+      "height": 100,
+      "material": {
+        "stripe": {
+          "orientation": "HORIZONTAL",
+          "evenColor": {
+            "rgba": [100, 100, 255, 30]
+          },
+          "oddColor": {
+            "rgba": [100, 100, 255, 10]
+          },
+          "offset": 0.0,
+          "repeat": 32
+        }
+      },
+      "outline": true,
+      "outlineColor": {
+        "rgba": [100, 100, 255, 100]
+      },
+      "outlineWidth": 2
+    }
+  }
+]

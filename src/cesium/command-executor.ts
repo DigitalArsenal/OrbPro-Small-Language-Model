@@ -221,6 +221,12 @@ export class CesiumCommandExecutor {
           return this.executeEntityRemove(command);
         case 'entity.update':
           return await this.executeEntityUpdate(command);
+        case 'entity.flyTo':
+          return await this.executeFlyToEntity(command);
+        case 'entity.show':
+          return this.executeShowEntity(command);
+        case 'entity.hide':
+          return this.executeHideEntity(command);
         case 'imagery.add':
           return await this.executeImageryAdd(command);
         case 'layer.toggle':
@@ -372,6 +378,87 @@ export class CesiumCommandExecutor {
     });
 
     return { success: true, message: `Entity '${command.id}' updated` };
+  }
+
+  private async executeFlyToEntity(command: Extract<CesiumCommand, { type: 'entity.flyTo' }>): Promise<{ success: boolean; message: string }> {
+    // Find entity by ID or name
+    let entity = this.findEntityByIdOrName(command.entityId);
+
+    if (!entity) {
+      return { success: false, message: `Entity '${command.entityId}' not found` };
+    }
+
+    // Create offset if specified
+    let offset: unknown = undefined;
+    if (command.offset) {
+      offset = new Cesium.HeadingPitchRange(
+        command.offset.heading ?? 0,
+        command.offset.pitch ?? -Math.PI / 4,
+        command.offset.range ?? 10000
+      );
+    }
+
+    // Use viewer.flyTo for entities (more reliable than camera.flyTo)
+    try {
+      await this.viewer.flyTo(entity, {
+        duration: command.duration ?? 3,
+        offset,
+      });
+      return { success: true, message: `Camera flew to entity '${command.entityId}'` };
+    } catch (error) {
+      return { success: false, message: `Failed to fly to entity: ${error}` };
+    }
+  }
+
+  private executeShowEntity(command: Extract<CesiumCommand, { type: 'entity.show' }>): { success: boolean; message: string } {
+    const entity = this.findEntityByIdOrName(command.entityId) as { show?: boolean } | undefined;
+    if (!entity) {
+      return { success: false, message: `Entity '${command.entityId}' not found` };
+    }
+    entity.show = true;
+    return { success: true, message: `Entity '${command.entityId}' is now visible` };
+  }
+
+  private executeHideEntity(command: Extract<CesiumCommand, { type: 'entity.hide' }>): { success: boolean; message: string } {
+    const entity = this.findEntityByIdOrName(command.entityId) as { show?: boolean } | undefined;
+    if (!entity) {
+      return { success: false, message: `Entity '${command.entityId}' not found` };
+    }
+    entity.show = false;
+    return { success: true, message: `Entity '${command.entityId}' is now hidden` };
+  }
+
+  /**
+   * Find an entity by its ID or name, searching both direct entities and data sources
+   */
+  private findEntityByIdOrName(idOrName: string): unknown | undefined {
+    // First try direct entity collection by ID
+    let entity = this.viewer.entities.getById(idOrName);
+    if (entity) return entity;
+
+    // Search by name in direct entities
+    for (const e of this.viewer.entities.values) {
+      const ent = e as { name?: string };
+      if (ent.name === idOrName) return e;
+    }
+
+    // Search in data sources
+    for (let i = 0; i < this.viewer.dataSources.length; i++) {
+      const dataSource = this.viewer.dataSources.get(i) as { entities?: CesiumEntityCollection };
+      if (dataSource.entities) {
+        // Try by ID
+        entity = dataSource.entities.getById(idOrName);
+        if (entity) return entity;
+
+        // Try by name
+        for (const e of dataSource.entities.values) {
+          const ent = e as { name?: string };
+          if (ent.name === idOrName) return e;
+        }
+      }
+    }
+
+    return undefined;
   }
 
   private async executeImageryAdd(command: Extract<CesiumCommand, { type: 'imagery.add' }>): Promise<{ success: boolean; message: string }> {

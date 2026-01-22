@@ -1,0 +1,207 @@
+[
+  {
+    "id": "document",
+    "name": "Fleet Tracking Demo",
+    "version": "1.0",
+    "clock": {
+      "interval": "2024-01-01T06:00:00Z/2024-01-01T18:00:00Z",
+      "currentTime": "2024-01-01T06:00:00Z",
+      "multiplier": 600,
+      "range": "LOOP_STOP",
+      "step": "SYSTEM_CLOCK_MULTIPLIER"
+    }
+  },
+  {
+    "id": "vehicle-1",
+    "name": "Truck A",
+    "description": "Delivery truck route A",
+    "billboard": {
+      "image": "data:image/svg+xml;base64,PHN2ZyB4bWxucz0iaHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmciIHdpZHRoPSIyNCIgaGVpZ2h0PSIyNCIgdmlld0JveD0iMCAwIDI0IDI0IiBmaWxsPSIjNENCQjE3Ij48Y2lyY2xlIGN4PSIxMiIgY3k9IjEyIiByPSIxMCIvPjwvc3ZnPg==",
+      "scale": 1.0,
+      "show": true
+    },
+    "label": {
+      "text": "Truck A",
+      "font": "bold 11pt sans-serif",
+      "fillColor": {
+        "rgba": [76, 187, 23, 255]
+      },
+      "outlineColor": {
+        "rgba": [0, 0, 0, 255]
+      },
+      "outlineWidth": 2,
+      "style": "FILL_AND_OUTLINE",
+      "horizontalOrigin": "LEFT",
+      "pixelOffset": {
+        "cartesian2": [15, 0]
+      }
+    },
+    "path": {
+      "material": {
+        "solidColor": {
+          "color": {
+            "rgba": [76, 187, 23, 200]
+          }
+        }
+      },
+      "width": 3,
+      "leadTime": 0,
+      "trailTime": 7200,
+      "resolution": 60
+    },
+    "position": {
+      "interpolationAlgorithm": "LAGRANGE",
+      "interpolationDegree": 2,
+      "epoch": "2024-01-01T06:00:00Z",
+      "cartographicDegrees": [
+        0, -122.4194, 37.7749, 30,
+        7200, -122.4094, 37.7849, 30,
+        14400, -122.3994, 37.7949, 30,
+        21600, -122.3894, 37.7849, 30,
+        28800, -122.3794, 37.7749, 30,
+        36000, -122.3894, 37.7649, 30,
+        43200, -122.3994, 37.7549, 30
+      ]
+    }
+  },
+  {
+    "id": "vehicle-2",
+    "name": "Truck B",
+    "description": "Delivery truck route B",
+    "billboard": {
+      "image": "data:image/svg+xml;base64,PHN2ZyB4bWxucz0iaHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmciIHdpZHRoPSIyNCIgaGVpZ2h0PSIyNCIgdmlld0JveD0iMCAwIDI0IDI0IiBmaWxsPSIjRjQyOTJGIj48Y2lyY2xlIGN4PSIxMiIgY3k9IjEyIiByPSIxMCIvPjwvc3ZnPg==",
+      "scale": 1.0,
+      "show": true
+    },
+    "label": {
+      "text": "Truck B",
+      "font": "bold 11pt sans-serif",
+      "fillColor": {
+        "rgba": [244, 41, 47, 255]
+      },
+      "outlineColor": {
+        "rgba": [0, 0, 0, 255]
+      },
+      "outlineWidth": 2,
+      "style": "FILL_AND_OUTLINE",
+      "horizontalOrigin": "LEFT",
+      "pixelOffset": {
+        "cartesian2": [15, 0]
+      }
+    },
+    "path": {
+      "material": {
+        "solidColor": {
+          "color": {
+            "rgba": [244, 41, 47, 200]
+          }
+        }
+      },
+      "width": 3,
+      "leadTime": 0,
+      "trailTime": 7200,
+      "resolution": 60
+    },
+    "position": {
+      "interpolationAlgorithm": "LAGRANGE",
+      "interpolationDegree": 2,
+      "epoch": "2024-01-01T06:00:00Z",
+      "cartographicDegrees": [
+        0, -122.4494, 37.7549, 30,
+        7200, -122.4594, 37.7649, 30,
+        14400, -122.4694, 37.7749, 30,
+        21600, -122.4594, 37.7849, 30,
+        28800, -122.4494, 37.7949, 30,
+        36000, -122.4394, 37.7849, 30,
+        43200, -122.4294, 37.7749, 30
+      ]
+    }
+  },
+  {
+    "id": "vehicle-3",
+    "name": "Truck C",
+    "description": "Delivery truck route C",
+    "billboard": {
+      "image": "data:image/svg+xml;base64,PHN2ZyB4bWxucz0iaHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmciIHdpZHRoPSIyNCIgaGVpZ2h0PSIyNCIgdmlld0JveD0iMCAwIDI0IDI0IiBmaWxsPSIjNDI4NUY0Ij48Y2lyY2xlIGN4PSIxMiIgY3k9IjEyIiByPSIxMCIvPjwvc3ZnPg==",
+      "scale": 1.0,
+      "show": true
+    },
+    "label": {
+      "text": "Truck C",
+      "font": "bold 11pt sans-serif",
+      "fillColor": {
+        "rgba": [66, 133, 244, 255]
+      },
+      "outlineColor": {
+        "rgba": [0, 0, 0, 255]
+      },
+      "outlineWidth": 2,
+      "style": "FILL_AND_OUTLINE",
+      "horizontalOrigin": "LEFT",
+      "pixelOffset": {
+        "cartesian2": [15, 0]
+      }
+    },
+    "path": {
+      "material": {
+        "solidColor": {
+          "color": {
+            "rgba": [66, 133, 244, 200]
+          }
+        }
+      },
+      "width": 3,
+      "leadTime": 0,
+      "trailTime": 7200,
+      "resolution": 60
+    },
+    "position": {
+      "interpolationAlgorithm": "LAGRANGE",
+      "interpolationDegree": 2,
+      "epoch": "2024-01-01T06:00:00Z",
+      "cartographicDegrees": [
+        0, -122.4294, 37.8049, 30,
+        7200, -122.4194, 37.8149, 30,
+        14400, -122.4094, 37.8049, 30,
+        21600, -122.3994, 37.7949, 30,
+        28800, -122.4094, 37.7849, 30,
+        36000, -122.4194, 37.7949, 30,
+        43200, -122.4294, 37.8049, 30
+      ]
+    }
+  },
+  {
+    "id": "warehouse",
+    "name": "Central Warehouse",
+    "description": "Main distribution center",
+    "position": {
+      "cartographicDegrees": [-122.4194, 37.7749, 0]
+    },
+    "point": {
+      "color": {
+        "rgba": [255, 193, 7, 255]
+      },
+      "pixelSize": 16,
+      "outlineColor": {
+        "rgba": [0, 0, 0, 255]
+      },
+      "outlineWidth": 3
+    },
+    "label": {
+      "text": "Warehouse",
+      "font": "bold 12pt sans-serif",
+      "fillColor": {
+        "rgba": [255, 193, 7, 255]
+      },
+      "outlineColor": {
+        "rgba": [0, 0, 0, 255]
+      },
+      "outlineWidth": 2,
+      "style": "FILL_AND_OUTLINE",
+      "verticalOrigin": "BOTTOM",
+      "pixelOffset": {
+        "cartesian2": [0, -20]
+      }
+    }
+  }
+]

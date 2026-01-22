@@ -11,12 +11,16 @@ export default defineConfig({
     exclude: ['@mlc-ai/web-llm'],
   },
   define: {
-    CESIUM_BASE_URL: JSON.stringify('/cesium'),
+    CESIUM_BASE_URL: JSON.stringify('/Cesium'),
   },
   server: {
     headers: {
       'Cross-Origin-Opener-Policy': 'same-origin',
-      'Cross-Origin-Embedder-Policy': 'require-corp',
+      'Cross-Origin-Embedder-Policy': 'credentialless',
+      'Cross-Origin-Resource-Policy': 'cross-origin',
+    },
+    fs: {
+      allow: ['.'],
     },
   },
 });

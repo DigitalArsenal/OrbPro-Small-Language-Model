@@ -1,0 +1,84 @@
+[
+  {
+    "id": "document",
+    "name": "ISS Orbit",
+    "version": "1.0",
+    "clock": {
+      "interval": "2024-01-01T00:00:00Z/2024-01-01T01:30:00Z",
+      "currentTime": "2024-01-01T00:00:00Z",
+      "multiplier": 60,
+      "range": "LOOP_STOP",
+      "step": "SYSTEM_CLOCK_MULTIPLIER"
+    }
+  },
+  {
+    "id": "ISS",
+    "name": "International Space Station",
+    "description": "International Space Station orbit visualization",
+    "billboard": {
+      "eyeOffset": {
+        "cartesian": [0, 0, 0]
+      },
+      "horizontalOrigin": "CENTER",
+      "image": "data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAACAAAAAgCAYAAABzenr0AAAAAXNSR0IArs4c6QAAAARnQU1BAACxjwv8YQUAAAAJcEhZcwAADsMAAA7DAcdvqGQAAAGQSURBVFhH7ZZBCsIwEEW9gtdy4xG8gSdw5xm8gevCnXvXbhQFwa0rFyIi+EPSCW2TNE1d9MHQZtr/M5NJaJZlv0zKe8p6ylmS+vvGRAqgBAqgBAqgBAqgBAqgAOsLIEk6pDsqSVOUQH+/hJZYKYAS6C+A0whgXQEsLEBTApzzS3Q8WF4CuRHgHL0+2qVYWABJCXDOj9Du4C7EwgJISoBzfoR2B3chZhZAKQLO+QXaHdyFmFkAqRHgnB+g3cFdiJkFkAsgD+hptzxn2gT+j+hptzxnWgMRYEJxNDNwsJWH+Wfn6KlM0eP+GjL+qXB8D5wlAx0A1xNAcw/c9EDpCiA+gH4JKIECOAAE9YDuCtDdAbp7QHcP6O4BnRv0SIBPsboALqHdwV2ImQUIPqBrB7xw4A1w1g7k2ADvO+BaO5CnBjQNiNIOdNCASO1ABw2I1A5oxgp0zAByAbxw4C/AdTd4Fah7wmfdgCzrgIMGeNcBO2qA9wxo2gFLCnDOLqEdXwHOOQ5+gFvwb+xAo9EoT/4NWZb9AP42b4Y3vbhzAAAAAElFTkSuQmCC",
+      "pixelOffset": {
+        "cartesian2": [0, 0]
+      },
+      "scale": 1.0,
+      "show": true,
+      "verticalOrigin": "CENTER"
+    },
+    "label": {
+      "fillColor": {
+        "rgba": [255, 255, 255, 255]
+      },
+      "font": "14pt sans-serif",
+      "horizontalOrigin": "LEFT",
+      "outlineColor": {
+        "rgba": [0, 0, 0, 255]
+      },
+      "outlineWidth": 2,
+      "pixelOffset": {
+        "cartesian2": [12, 0]
+      },
+      "show": true,
+      "style": "FILL_AND_OUTLINE",
+      "text": "ISS",
+      "verticalOrigin": "CENTER"
+    },
+    "path": {
+      "material": {
+        "polylineOutline": {
+          "color": {
+            "rgba": [255, 165, 0, 255]
+          },
+          "outlineColor": {
+            "rgba": [0, 0, 0, 255]
+          },
+          "outlineWidth": 2
+        }
+      },
+      "width": 3,
+      "leadTime": 2700,
+      "trailTime": 2700,
+      "resolution": 120
+    },
+    "position": {
+      "interpolationAlgorithm": "LAGRANGE",
+      "interpolationDegree": 5,
+      "referenceFrame": "INERTIAL",
+      "epoch": "2024-01-01T00:00:00Z",
+      "cartesian": [
+        0, 6778137, 0, 0,
+        900, 4791961.71, 4791961.71, 0,
+        1800, 0, 6778137, 0,
+        2700, -4791961.71, 4791961.71, 0,
+        3600, -6778137, 0, 0,
+        4500, -4791961.71, -4791961.71, 0,
+        5400, 0, -6778137, 0,
+        6300, 4791961.71, -4791961.71, 0,
+        7200, 6778137, 0, 0
+      ]
+    }
+  }
+]

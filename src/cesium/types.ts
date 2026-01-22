@@ -84,6 +84,27 @@ export interface CameraCinematicFlightCommand {
   loop?: boolean;              // Whether to loop back to the first waypoint
 }
 
+export interface FlyToEntityCommand {
+  type: 'entity.flyTo';
+  entityId: string;
+  duration?: number;           // Flight duration in seconds
+  offset?: {
+    heading?: number;          // radians
+    pitch?: number;            // radians
+    range?: number;            // meters from entity
+  };
+}
+
+export interface ShowEntityCommand {
+  type: 'entity.show';
+  entityId: string;
+}
+
+export interface HideEntityCommand {
+  type: 'entity.hide';
+  entityId: string;
+}
+
 // Entity commands
 export interface AddEntityCommand {
   type: 'entity.add';
@@ -209,6 +230,9 @@ export type CesiumCommand =
   | AddEntityCommand
   | RemoveEntityCommand
   | UpdateEntityCommand
+  | FlyToEntityCommand
+  | ShowEntityCommand
+  | HideEntityCommand
   | AddImageryCommand
   | ToggleLayerCommand
   | SetTimeCommand
@@ -235,7 +259,13 @@ export interface CZMLPacket {
   polyline?: CZMLPolyline;
   polygon?: CZMLPolygon;
   ellipse?: CZMLEllipse;
+  ellipsoid?: CZMLEllipsoid;
   box?: CZMLBox;
+  cylinder?: CZMLCylinder;
+  corridor?: CZMLCorridor;
+  rectangle?: CZMLRectangle;
+  wall?: CZMLWall;
+  polylineVolume?: CZMLPolylineVolume;
   model?: CZMLModel;
   path?: CZMLPath;
 }
@@ -354,6 +384,98 @@ export interface CZMLPath {
   resolution?: number;
   leadTime?: number;
   trailTime?: number;
+}
+
+export interface CZMLEllipsoid {
+  radii: { cartesian: number[] };  // [x, y, z] radii in meters
+  innerRadii?: { cartesian: number[] };  // For hollow ellipsoids
+  minimumClock?: number;           // radians
+  maximumClock?: number;           // radians
+  minimumCone?: number;            // radians
+  maximumCone?: number;            // radians
+  fill?: boolean;
+  material?: CZMLMaterial;
+  outline?: boolean;
+  outlineColor?: CZMLColor;
+  outlineWidth?: number;
+  stackPartitions?: number;
+  slicePartitions?: number;
+  subdivisions?: number;
+  show?: boolean;
+  heightReference?: 'NONE' | 'CLAMP_TO_GROUND' | 'RELATIVE_TO_GROUND';
+}
+
+export interface CZMLCylinder {
+  length: number;                  // Height in meters
+  topRadius: number;               // Top radius (0 for cone)
+  bottomRadius: number;            // Bottom radius
+  fill?: boolean;
+  material?: CZMLMaterial;
+  outline?: boolean;
+  outlineColor?: CZMLColor;
+  outlineWidth?: number;
+  numberOfVerticalLines?: number;
+  slices?: number;
+  show?: boolean;
+  heightReference?: 'NONE' | 'CLAMP_TO_GROUND' | 'RELATIVE_TO_GROUND';
+}
+
+export interface CZMLCorridor {
+  positions: CZMLPosition;
+  width: number;                   // Width in meters
+  height?: number;                 // Height above ground
+  extrudedHeight?: number;         // Extruded height
+  cornerType?: 'ROUNDED' | 'MITERED' | 'BEVELED';
+  granularity?: number;
+  fill?: boolean;
+  material?: CZMLMaterial;
+  outline?: boolean;
+  outlineColor?: CZMLColor;
+  outlineWidth?: number;
+  show?: boolean;
+  heightReference?: 'NONE' | 'CLAMP_TO_GROUND' | 'RELATIVE_TO_GROUND';
+}
+
+export interface CZMLRectangle {
+  coordinates: { wsenDegrees: number[] };  // [west, south, east, north] in degrees
+  height?: number;
+  extrudedHeight?: number;
+  rotation?: number;               // radians
+  stRotation?: number;             // Texture rotation in radians
+  granularity?: number;
+  fill?: boolean;
+  material?: CZMLMaterial;
+  outline?: boolean;
+  outlineColor?: CZMLColor;
+  outlineWidth?: number;
+  show?: boolean;
+  heightReference?: 'NONE' | 'CLAMP_TO_GROUND' | 'RELATIVE_TO_GROUND';
+}
+
+export interface CZMLWall {
+  positions: CZMLPosition;
+  minimumHeights?: number[];       // Bottom heights array
+  maximumHeights?: number[];       // Top heights array
+  granularity?: number;
+  fill?: boolean;
+  material?: CZMLMaterial;
+  outline?: boolean;
+  outlineColor?: CZMLColor;
+  outlineWidth?: number;
+  show?: boolean;
+}
+
+export interface CZMLPolylineVolume {
+  positions: CZMLPosition;
+  shape: { cartesian2: number[] }; // 2D shape cross-section [x1, y1, x2, y2, ...]
+  cornerType?: 'ROUNDED' | 'MITERED' | 'BEVELED';
+  granularity?: number;
+  fill?: boolean;
+  material?: CZMLMaterial;
+  outline?: boolean;
+  outlineColor?: CZMLColor;
+  outlineWidth?: number;
+  show?: boolean;
 }
 
 export interface CZMLColor {

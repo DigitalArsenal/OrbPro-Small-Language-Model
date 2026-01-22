@@ -100,6 +100,129 @@ const tools = {
       color: colorSchema.optional(),
     }),
   },
+  addSphere: {
+    name: 'addSphere',
+    description: 'Add a 3D sphere at a location',
+    inputSchema: z.object({
+      longitude: z.number().min(-180).max(180),
+      latitude: z.number().min(-90).max(90),
+      radius: z.number().positive().describe('Sphere radius in meters'),
+      name: z.string().optional(),
+      color: colorSchema.optional(),
+    }),
+  },
+  addEllipsoid: {
+    name: 'addEllipsoid',
+    description: 'Add a 3D ellipsoid at a location with different radii in X, Y, Z directions',
+    inputSchema: z.object({
+      longitude: z.number().min(-180).max(180),
+      latitude: z.number().min(-90).max(90),
+      radiiX: z.number().positive().describe('Radius in X direction (meters)'),
+      radiiY: z.number().positive().describe('Radius in Y direction (meters)'),
+      radiiZ: z.number().positive().describe('Radius in Z direction (meters)'),
+      name: z.string().optional(),
+      color: colorSchema.optional(),
+    }),
+  },
+  addCylinder: {
+    name: 'addCylinder',
+    description: 'Add a 3D cylinder at a location. Set topRadius to 0 for a cone.',
+    inputSchema: z.object({
+      longitude: z.number().min(-180).max(180),
+      latitude: z.number().min(-90).max(90),
+      length: z.number().positive().describe('Height of the cylinder in meters'),
+      topRadius: z.number().min(0).describe('Top radius in meters (0 for cone)'),
+      bottomRadius: z.number().positive().describe('Bottom radius in meters'),
+      name: z.string().optional(),
+      color: colorSchema.optional(),
+    }),
+  },
+  addCorridor: {
+    name: 'addCorridor',
+    description: 'Draw a corridor (road/path) with width along multiple positions',
+    inputSchema: z.object({
+      positions: z.array(positionSchema).min(2).describe('Array of positions along the corridor'),
+      width: z.number().positive().describe('Width of the corridor in meters'),
+      height: z.number().optional().describe('Height above ground in meters'),
+      extrudedHeight: z.number().optional().describe('Extruded height to create 3D volume'),
+      name: z.string().optional(),
+      color: colorSchema.optional(),
+    }),
+  },
+  addRectangle: {
+    name: 'addRectangle',
+    description: 'Draw a rectangle defined by geographic bounds',
+    inputSchema: z.object({
+      west: z.number().min(-180).max(180).describe('Western longitude in degrees'),
+      south: z.number().min(-90).max(90).describe('Southern latitude in degrees'),
+      east: z.number().min(-180).max(180).describe('Eastern longitude in degrees'),
+      north: z.number().min(-90).max(90).describe('Northern latitude in degrees'),
+      height: z.number().optional().describe('Height above ground in meters'),
+      extrudedHeight: z.number().optional().describe('Extruded height to create 3D volume'),
+      name: z.string().optional(),
+      color: colorSchema.optional(),
+    }),
+  },
+  addWall: {
+    name: 'addWall',
+    description: 'Draw a vertical wall along multiple positions',
+    inputSchema: z.object({
+      positions: z.array(positionSchema).min(2).describe('Array of positions along the wall'),
+      minimumHeights: z.array(z.number()).optional().describe('Bottom heights at each position'),
+      maximumHeights: z.array(z.number()).optional().describe('Top heights at each position'),
+      name: z.string().optional(),
+      color: colorSchema.optional(),
+    }),
+  },
+  addBox: {
+    name: 'addBox',
+    description: 'Add a 3D box at a location',
+    inputSchema: z.object({
+      longitude: z.number().min(-180).max(180),
+      latitude: z.number().min(-90).max(90),
+      dimensionX: z.number().positive().describe('Width in meters (X dimension)'),
+      dimensionY: z.number().positive().describe('Depth in meters (Y dimension)'),
+      dimensionZ: z.number().positive().describe('Height in meters (Z dimension)'),
+      name: z.string().optional(),
+      color: colorSchema.optional(),
+    }),
+  },
+  addModel: {
+    name: 'addModel',
+    description: 'Add a 3D model (glTF/glb) at a location',
+    inputSchema: z.object({
+      longitude: z.number().min(-180).max(180),
+      latitude: z.number().min(-90).max(90),
+      url: z.string().describe('URL to the glTF/glb model file'),
+      scale: z.number().positive().optional().describe('Scale factor for the model'),
+      name: z.string().optional(),
+    }),
+  },
+  flyToEntity: {
+    name: 'flyToEntity',
+    description: 'Fly the camera to view a specific entity by its name or ID',
+    inputSchema: z.object({
+      entityId: z.string().describe('Name or ID of the entity to fly to'),
+      duration: z.number().positive().optional().describe('Flight duration in seconds'),
+      heading: z.number().optional().describe('Camera heading in degrees'),
+      pitch: z.number().optional().describe('Camera pitch in degrees (negative looks down)'),
+      range: z.number().positive().optional().describe('Distance from entity in meters'),
+    }),
+  },
+  showEntity: {
+    name: 'showEntity',
+    description: 'Make an entity visible by its ID',
+    inputSchema: z.object({
+      entityId: z.string().describe('ID of the entity to show'),
+    }),
+  },
+  hideEntity: {
+    name: 'hideEntity',
+    description: 'Hide an entity by its ID',
+    inputSchema: z.object({
+      entityId: z.string().describe('ID of the entity to hide'),
+    }),
+  },
   removeEntity: {
     name: 'removeEntity',
     description: 'Remove an entity by its ID',
@@ -513,6 +636,169 @@ export class CesiumMCPServer {
         const command: CesiumCommand = {
           type: 'entity.add',
           entity,
+        };
+        return this.commandHandler(command);
+      }
+
+      case 'addSphere': {
+        const args = input as ToolInput<'addSphere'>;
+        const entity = czmlGenerator.createSphere(
+          { longitude: args.longitude, latitude: args.latitude },
+          args.radius,
+          { name: args.name, color: args.color }
+        );
+        const command: CesiumCommand = {
+          type: 'entity.add',
+          entity,
+        };
+        return this.commandHandler(command);
+      }
+
+      case 'addEllipsoid': {
+        const args = input as ToolInput<'addEllipsoid'>;
+        const entity = czmlGenerator.createEllipsoid(
+          { longitude: args.longitude, latitude: args.latitude },
+          { x: args.radiiX, y: args.radiiY, z: args.radiiZ },
+          { name: args.name, color: args.color }
+        );
+        const command: CesiumCommand = {
+          type: 'entity.add',
+          entity,
+        };
+        return this.commandHandler(command);
+      }
+
+      case 'addCylinder': {
+        const args = input as ToolInput<'addCylinder'>;
+        const entity = czmlGenerator.createCylinder(
+          { longitude: args.longitude, latitude: args.latitude },
+          {
+            length: args.length,
+            topRadius: args.topRadius,
+            bottomRadius: args.bottomRadius,
+            name: args.name,
+            color: args.color,
+          }
+        );
+        const command: CesiumCommand = {
+          type: 'entity.add',
+          entity,
+        };
+        return this.commandHandler(command);
+      }
+
+      case 'addCorridor': {
+        const args = input as ToolInput<'addCorridor'>;
+        const entity = czmlGenerator.createCorridor(
+          args.positions as CartographicPosition[],
+          args.width,
+          {
+            name: args.name,
+            color: args.color,
+            height: args.height,
+            extrudedHeight: args.extrudedHeight,
+          }
+        );
+        const command: CesiumCommand = {
+          type: 'entity.add',
+          entity,
+        };
+        return this.commandHandler(command);
+      }
+
+      case 'addRectangle': {
+        const args = input as ToolInput<'addRectangle'>;
+        const entity = czmlGenerator.createRectangle(
+          { west: args.west, south: args.south, east: args.east, north: args.north },
+          {
+            name: args.name,
+            color: args.color,
+            height: args.height,
+            extrudedHeight: args.extrudedHeight,
+          }
+        );
+        const command: CesiumCommand = {
+          type: 'entity.add',
+          entity,
+        };
+        return this.commandHandler(command);
+      }
+
+      case 'addWall': {
+        const args = input as ToolInput<'addWall'>;
+        const entity = czmlGenerator.createWall(
+          args.positions as CartographicPosition[],
+          {
+            name: args.name,
+            color: args.color,
+            minimumHeights: args.minimumHeights,
+            maximumHeights: args.maximumHeights,
+          }
+        );
+        const command: CesiumCommand = {
+          type: 'entity.add',
+          entity,
+        };
+        return this.commandHandler(command);
+      }
+
+      case 'addBox': {
+        const args = input as ToolInput<'addBox'>;
+        const entity = czmlGenerator.createBox(
+          { longitude: args.longitude, latitude: args.latitude },
+          { x: args.dimensionX, y: args.dimensionY, z: args.dimensionZ },
+          { name: args.name, color: args.color }
+        );
+        const command: CesiumCommand = {
+          type: 'entity.add',
+          entity,
+        };
+        return this.commandHandler(command);
+      }
+
+      case 'addModel': {
+        const args = input as ToolInput<'addModel'>;
+        const entity = czmlGenerator.createModel(
+          { longitude: args.longitude, latitude: args.latitude },
+          args.url,
+          { name: args.name, scale: args.scale }
+        );
+        const command: CesiumCommand = {
+          type: 'entity.add',
+          entity,
+        };
+        return this.commandHandler(command);
+      }
+
+      case 'flyToEntity': {
+        const args = input as ToolInput<'flyToEntity'>;
+        const command: CesiumCommand = {
+          type: 'entity.flyTo',
+          entityId: args.entityId,
+          duration: args.duration,
+          offset: (args.heading !== undefined || args.pitch !== undefined || args.range !== undefined) ? {
+            heading: args.heading !== undefined ? args.heading * Math.PI / 180 : undefined,
+            pitch: args.pitch !== undefined ? args.pitch * Math.PI / 180 : undefined,
+            range: args.range,
+          } : undefined,
+        };
+        return this.commandHandler(command);
+      }
+
+      case 'showEntity': {
+        const args = input as ToolInput<'showEntity'>;
+        const command: CesiumCommand = {
+          type: 'entity.show',
+          entityId: args.entityId,
+        };
+        return this.commandHandler(command);
+      }
+
+      case 'hideEntity': {
+        const args = input as ToolInput<'hideEntity'>;
+        const command: CesiumCommand = {
+          type: 'entity.hide',
+          entityId: args.entityId,
         };
         return this.commandHandler(command);
       }

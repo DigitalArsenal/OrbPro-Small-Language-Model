@@ -1,0 +1,38 @@
+# Dependencies
+node_modules/
+
+# Build outputs
+dist/
+
+# Cesium assets (large, downloaded separately)
+public/Cesium/
+
+# WASM build artifacts
+wasm/build/
+
+# Local settings
+settings.json
+settings.local.json
+*.local.json
+
+# IDE
+.vscode/
+.idea/
+*.swp
+*.swo
+
+# OS
+.DS_Store
+Thumbs.db
+
+# Logs
+*.log
+npm-debug.log*
+
+# Environment
+.env
+.env.local
+.env.*.local
+
+# Training data (large)
+training/
