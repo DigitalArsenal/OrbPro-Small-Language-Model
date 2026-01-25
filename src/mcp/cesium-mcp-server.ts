@@ -21,6 +21,25 @@ const colorSchema = z.enum([
 ]);
 
 // Tool definitions
+// Default values for tool parameters
+const DEFAULTS = {
+  flyTo: { height: 500000, duration: 2 },
+  lookAt: { height: 0, range: 100000 },
+  point: { color: 'yellow', size: 10 },
+  label: { color: 'white' },
+  polyline: { color: 'blue', width: 2 },
+  polygon: { color: 'blue' },
+  circle: { color: 'blue', height: 0 },
+  sphere: { color: 'blue', height: 0 },
+  ellipsoid: { color: 'blue', height: 0 },
+  cylinder: { color: 'blue' },
+  box: { color: 'blue' },
+  model: { scale: 1 },
+  corridor: { color: 'blue' },
+  rectangle: { color: 'blue' },
+  wall: { color: 'gray' },
+} as const;
+
 const tools = {
   flyTo: {
     name: 'flyTo',
@@ -28,8 +47,8 @@ const tools = {
     inputSchema: z.object({
       longitude: z.number().min(-180).max(180).describe('Longitude in degrees'),
       latitude: z.number().min(-90).max(90).describe('Latitude in degrees'),
-      height: z.number().positive().optional().describe('Camera height in meters'),
-      duration: z.number().positive().optional().describe('Flight duration in seconds'),
+      height: z.number().positive().optional().describe('Camera height in meters (default: 500000)'),
+      duration: z.number().positive().optional().describe('Flight duration in seconds (default: 2)'),
     }),
   },
   lookAt: {
@@ -38,7 +57,8 @@ const tools = {
     inputSchema: z.object({
       longitude: z.number().min(-180).max(180).describe('Target longitude'),
       latitude: z.number().min(-90).max(90).describe('Target latitude'),
-      range: z.number().positive().optional().describe('Distance from target in meters'),
+      height: z.number().optional().describe('Target height in meters (default: 0)'),
+      range: z.number().positive().optional().describe('Distance from target in meters (default: 100000)'),
     }),
   },
   zoom: {
@@ -55,8 +75,8 @@ const tools = {
       longitude: z.number().min(-180).max(180),
       latitude: z.number().min(-90).max(90),
       name: z.string().optional().describe('Label for the point'),
-      color: colorSchema.optional(),
-      size: z.number().positive().optional().describe('Point size in pixels'),
+      color: colorSchema.optional().describe('Point color (default: yellow)'),
+      size: z.number().positive().optional().describe('Point size in pixels (default: 10)'),
     }),
   },
   addLabel: {
@@ -66,7 +86,7 @@ const tools = {
       longitude: z.number().min(-180).max(180),
       latitude: z.number().min(-90).max(90),
       text: z.string().describe('Label text'),
-      color: colorSchema.optional(),
+      color: colorSchema.optional().describe('Label color (default: white)'),
     }),
   },
   addPolyline: {
@@ -75,8 +95,8 @@ const tools = {
     inputSchema: z.object({
       positions: z.array(positionSchema).min(2).describe('Array of positions'),
       name: z.string().optional(),
-      color: colorSchema.optional(),
-      width: z.number().positive().optional(),
+      color: colorSchema.optional().describe('Line color (default: blue)'),
+      width: z.number().positive().optional().describe('Line width in pixels (default: 2)'),
     }),
   },
   addPolygon: {
@@ -85,7 +105,7 @@ const tools = {
     inputSchema: z.object({
       positions: z.array(positionSchema).min(3).describe('Array of vertex positions'),
       name: z.string().optional(),
-      color: colorSchema.optional(),
+      color: colorSchema.optional().describe('Fill color (default: blue)'),
       extrudedHeight: z.number().optional().describe('Height to extrude the polygon'),
     }),
   },
@@ -95,9 +115,10 @@ const tools = {
     inputSchema: z.object({
       longitude: z.number().min(-180).max(180),
       latitude: z.number().min(-90).max(90),
+      height: z.number().optional().describe('Height above ground in meters (default: 0)'),
       radius: z.number().positive().describe('Circle radius in meters'),
       name: z.string().optional(),
-      color: colorSchema.optional(),
+      color: colorSchema.optional().describe('Fill color (default: blue)'),
     }),
   },
   addSphere: {
@@ -106,10 +127,10 @@ const tools = {
     inputSchema: z.object({
       longitude: z.number().min(-180).max(180),
       latitude: z.number().min(-90).max(90),
-      height: z.number().optional().describe('Height above ground in meters'),
+      height: z.number().optional().describe('Height above ground in meters (default: 0)'),
       radius: z.number().positive().describe('Sphere radius in meters'),
       name: z.string().optional(),
-      color: colorSchema.optional(),
+      color: colorSchema.optional().describe('Sphere color (default: blue)'),
     }),
   },
   addEllipsoid: {
@@ -118,12 +139,12 @@ const tools = {
     inputSchema: z.object({
       longitude: z.number().min(-180).max(180),
       latitude: z.number().min(-90).max(90),
-      height: z.number().optional().describe('Height above ground in meters'),
+      height: z.number().optional().describe('Height above ground in meters (default: 0)'),
       radiiX: z.number().positive().describe('Radius in X direction (meters)'),
       radiiY: z.number().positive().describe('Radius in Y direction (meters)'),
       radiiZ: z.number().positive().describe('Radius in Z direction (meters)'),
       name: z.string().optional(),
-      color: colorSchema.optional(),
+      color: colorSchema.optional().describe('Ellipsoid color (default: blue)'),
     }),
   },
   addCylinder: {
@@ -136,7 +157,7 @@ const tools = {
       topRadius: z.number().min(0).describe('Top radius in meters (0 for cone)'),
       bottomRadius: z.number().positive().describe('Bottom radius in meters'),
       name: z.string().optional(),
-      color: colorSchema.optional(),
+      color: colorSchema.optional().describe('Cylinder color (default: blue)'),
     }),
   },
   addCorridor: {
@@ -145,10 +166,10 @@ const tools = {
     inputSchema: z.object({
       positions: z.array(positionSchema).min(2).describe('Array of positions along the corridor'),
       width: z.number().positive().describe('Width of the corridor in meters'),
-      height: z.number().optional().describe('Height above ground in meters'),
+      height: z.number().optional().describe('Height above ground in meters (default: 0)'),
       extrudedHeight: z.number().optional().describe('Extruded height to create 3D volume'),
       name: z.string().optional(),
-      color: colorSchema.optional(),
+      color: colorSchema.optional().describe('Corridor color (default: blue)'),
     }),
   },
   addRectangle: {
@@ -159,10 +180,10 @@ const tools = {
       south: z.number().min(-90).max(90).describe('Southern latitude in degrees'),
       east: z.number().min(-180).max(180).describe('Eastern longitude in degrees'),
       north: z.number().min(-90).max(90).describe('Northern latitude in degrees'),
-      height: z.number().optional().describe('Height above ground in meters'),
+      height: z.number().optional().describe('Height above ground in meters (default: 0)'),
       extrudedHeight: z.number().optional().describe('Extruded height to create 3D volume'),
       name: z.string().optional(),
-      color: colorSchema.optional(),
+      color: colorSchema.optional().describe('Rectangle color (default: blue)'),
     }),
   },
   addWall: {
@@ -170,10 +191,10 @@ const tools = {
     description: 'Draw a vertical wall along multiple positions',
     inputSchema: z.object({
       positions: z.array(positionSchema).min(2).describe('Array of positions along the wall'),
-      minimumHeights: z.array(z.number()).optional().describe('Bottom heights at each position'),
-      maximumHeights: z.array(z.number()).optional().describe('Top heights at each position'),
+      minimumHeights: z.array(z.number()).optional().describe('Bottom heights at each position (default: 0)'),
+      maximumHeights: z.array(z.number()).optional().describe('Top heights at each position (default: 100)'),
       name: z.string().optional(),
-      color: colorSchema.optional(),
+      color: colorSchema.optional().describe('Wall color (default: gray)'),
     }),
   },
   addBox: {
@@ -186,7 +207,7 @@ const tools = {
       dimensionY: z.number().positive().describe('Depth in meters (Y dimension)'),
       dimensionZ: z.number().positive().describe('Height in meters (Z dimension)'),
       name: z.string().optional(),
-      color: colorSchema.optional(),
+      color: colorSchema.optional().describe('Box color (default: blue)'),
     }),
   },
   addModel: {
@@ -196,7 +217,7 @@ const tools = {
       longitude: z.number().min(-180).max(180),
       latitude: z.number().min(-90).max(90),
       url: z.string().describe('URL to the glTF/glb model file'),
-      scale: z.number().positive().optional().describe('Scale factor for the model'),
+      scale: z.number().positive().optional().describe('Scale factor for the model (default: 1)'),
       name: z.string().optional(),
     }),
   },
