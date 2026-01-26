@@ -36,13 +36,18 @@ npm-debug.log*
 
 # Training data (generated, can regenerate with npx tsx training/generate-training-data.ts)
 training/generated-training-data.jsonl
+training/train.jsonl
+training/valid.jsonl
+training/lora_config.yaml
 training/finetune/output/
 training/*.bin
 training/*.safetensors
 training/cesium-qwen-lora/
+training/cesium-qwen-lora-mlx/
 
 # MLC compiled models (download or compile separately)
 mlc-models/
+public/models/
 
 # Build cache (Docker compilation caches, HuggingFace downloads)
 .cache/

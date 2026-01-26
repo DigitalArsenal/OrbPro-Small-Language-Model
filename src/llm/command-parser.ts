@@ -7,36 +7,201 @@ import type { CesiumCommand, CartographicPosition } from '../cesium/types';
 import type { ToolCall } from './web-llm-engine';
 
 // Known location database for natural language processing
-const KNOWN_LOCATIONS: Record<string, CartographicPosition> = {
+// Exported for use by MCP server and other components
+export const KNOWN_LOCATIONS: Record<string, CartographicPosition> = {
   // ============================================
-  // MAJOR US CITIES
+  // MAJOR US CITIES (with nicknames and aliases)
   // ============================================
+  // New York
   'new york': { longitude: -74.006, latitude: 40.7128 },
   'new york city': { longitude: -74.006, latitude: 40.7128 },
   'nyc': { longitude: -74.006, latitude: 40.7128 },
+  'the big apple': { longitude: -74.006, latitude: 40.7128 },
+  'big apple': { longitude: -74.006, latitude: 40.7128 },
+  'gotham': { longitude: -74.006, latitude: 40.7128 },
   'manhattan': { longitude: -73.9712, latitude: 40.7831 },
+  'brooklyn': { longitude: -73.9442, latitude: 40.6782 },
+  'queens': { longitude: -73.7949, latitude: 40.7282 },
+  'bronx': { longitude: -73.8648, latitude: 40.8448 },
+  'the bronx': { longitude: -73.8648, latitude: 40.8448 },
+  'staten island': { longitude: -74.1502, latitude: 40.5795 },
+  // Los Angeles
   'los angeles': { longitude: -118.2437, latitude: 34.0522 },
   'la': { longitude: -118.2437, latitude: 34.0522 },
+  'l.a.': { longitude: -118.2437, latitude: 34.0522 },
+  'city of angels': { longitude: -118.2437, latitude: 34.0522 },
+  'la la land': { longitude: -118.2437, latitude: 34.0522 },
+  'hollywood': { longitude: -118.3287, latitude: 34.0928 },
+  'beverly hills': { longitude: -118.4000, latitude: 34.0696 },
+  'santa monica': { longitude: -118.4912, latitude: 34.0195 },
+  // San Francisco
   'san francisco': { longitude: -122.4194, latitude: 37.7749 },
   'sf': { longitude: -122.4194, latitude: 37.7749 },
+  's.f.': { longitude: -122.4194, latitude: 37.7749 },
+  'frisco': { longitude: -122.4194, latitude: 37.7749 },
+  'the city by the bay': { longitude: -122.4194, latitude: 37.7749 },
+  'san fran': { longitude: -122.4194, latitude: 37.7749 },
+  'silicon valley': { longitude: -121.8863, latitude: 37.3861 },
+  'palo alto': { longitude: -122.1430, latitude: 37.4419 },
+  'cupertino': { longitude: -122.0322, latitude: 37.3230 },
+  'mountain view': { longitude: -122.0838, latitude: 37.3861 },
+  // Chicago
   'chicago': { longitude: -87.6298, latitude: 41.8781 },
+  'chi-town': { longitude: -87.6298, latitude: 41.8781 },
+  'chitown': { longitude: -87.6298, latitude: 41.8781 },
+  'the windy city': { longitude: -87.6298, latitude: 41.8781 },
+  'windy city': { longitude: -87.6298, latitude: 41.8781 },
+  'second city': { longitude: -87.6298, latitude: 41.8781 },
+  // Houston
   'houston': { longitude: -95.3698, latitude: 29.7604 },
+  'h-town': { longitude: -95.3698, latitude: 29.7604 },
+  'space city': { longitude: -95.3698, latitude: 29.7604 },
+  // Miami
   'miami': { longitude: -80.1918, latitude: 25.7617 },
+  'magic city': { longitude: -80.1918, latitude: 25.7617 },
+  'the 305': { longitude: -80.1918, latitude: 25.7617 },
+  'miami beach': { longitude: -80.1300, latitude: 25.7907 },
+  'south beach': { longitude: -80.1341, latitude: 25.7825 },
+  // Seattle
   'seattle': { longitude: -122.3321, latitude: 47.6062 },
+  'emerald city': { longitude: -122.3321, latitude: 47.6062 },
+  'the emerald city': { longitude: -122.3321, latitude: 47.6062 },
+  'rain city': { longitude: -122.3321, latitude: 47.6062 },
+  'jet city': { longitude: -122.3321, latitude: 47.6062 },
+  // Boston
   'boston': { longitude: -71.0589, latitude: 42.3601 },
+  'beantown': { longitude: -71.0589, latitude: 42.3601 },
+  'bean town': { longitude: -71.0589, latitude: 42.3601 },
+  'the hub': { longitude: -71.0589, latitude: 42.3601 },
+  'titletown': { longitude: -71.0589, latitude: 42.3601 },
+  'cambridge': { longitude: -71.1097, latitude: 42.3736 },
+  // Washington DC
   'washington': { longitude: -77.0369, latitude: 38.9072 },
   'washington dc': { longitude: -77.0369, latitude: 38.9072 },
+  'washington d.c.': { longitude: -77.0369, latitude: 38.9072 },
   'dc': { longitude: -77.0369, latitude: 38.9072 },
+  'd.c.': { longitude: -77.0369, latitude: 38.9072 },
+  'the district': { longitude: -77.0369, latitude: 38.9072 },
+  'the capital': { longitude: -77.0369, latitude: 38.9072 },
+  'dmv': { longitude: -77.0369, latitude: 38.9072 },
+  // Las Vegas
   'las vegas': { longitude: -115.1398, latitude: 36.1699 },
+  'vegas': { longitude: -115.1398, latitude: 36.1699 },
+  'sin city': { longitude: -115.1398, latitude: 36.1699 },
+  'the strip': { longitude: -115.1723, latitude: 36.1147 },
+  // Denver
   'denver': { longitude: -104.9903, latitude: 39.7392 },
+  'mile high city': { longitude: -104.9903, latitude: 39.7392 },
+  'the mile high city': { longitude: -104.9903, latitude: 39.7392 },
+  // Phoenix
   'phoenix': { longitude: -112.0740, latitude: 33.4484 },
+  'phx': { longitude: -112.0740, latitude: 33.4484 },
+  'valley of the sun': { longitude: -112.0740, latitude: 33.4484 },
+  'scottsdale': { longitude: -111.9261, latitude: 33.4942 },
+  // Philadelphia
   'philadelphia': { longitude: -75.1652, latitude: 39.9526 },
+  'philly': { longitude: -75.1652, latitude: 39.9526 },
+  'the city of brotherly love': { longitude: -75.1652, latitude: 39.9526 },
+  'brotherly love': { longitude: -75.1652, latitude: 39.9526 },
+  // San Diego
   'san diego': { longitude: -117.1611, latitude: 32.7157 },
+  'sd': { longitude: -117.1611, latitude: 32.7157 },
+  "america's finest city": { longitude: -117.1611, latitude: 32.7157 },
+  // Dallas
   'dallas': { longitude: -96.7970, latitude: 32.7767 },
+  'big d': { longitude: -96.7970, latitude: 32.7767 },
+  'dfw': { longitude: -97.0380, latitude: 32.8998 },
+  'fort worth': { longitude: -97.3308, latitude: 32.7555 },
+  // Atlanta
   'atlanta': { longitude: -84.3880, latitude: 33.7490 },
+  'atl': { longitude: -84.3880, latitude: 33.7490 },
+  'hotlanta': { longitude: -84.3880, latitude: 33.7490 },
+  'the a': { longitude: -84.3880, latitude: 33.7490 },
+  // Other US Cities
   'orlando': { longitude: -81.3792, latitude: 28.5383 },
   'honolulu': { longitude: -157.8583, latitude: 21.3069 },
   'anchorage': { longitude: -149.9003, latitude: 61.2181 },
+  'portland': { longitude: -122.6750, latitude: 45.5152 },
+  'pdx': { longitude: -122.6750, latitude: 45.5152 },
+  'stumptown': { longitude: -122.6750, latitude: 45.5152 },
+  'austin': { longitude: -97.7431, latitude: 30.2672 },
+  'keep austin weird': { longitude: -97.7431, latitude: 30.2672 },
+  'nashville': { longitude: -86.7816, latitude: 36.1627 },
+  'music city': { longitude: -86.7816, latitude: 36.1627 },
+  'new orleans': { longitude: -90.0715, latitude: 29.9511 },
+  'nola': { longitude: -90.0715, latitude: 29.9511 },
+  'the big easy': { longitude: -90.0715, latitude: 29.9511 },
+  'detroit': { longitude: -83.0458, latitude: 42.3314 },
+  'motor city': { longitude: -83.0458, latitude: 42.3314 },
+  'motown': { longitude: -83.0458, latitude: 42.3314 },
+  'minneapolis': { longitude: -93.2650, latitude: 44.9778 },
+  'twin cities': { longitude: -93.2650, latitude: 44.9778 },
+  'st paul': { longitude: -93.0900, latitude: 44.9537 },
+  'saint paul': { longitude: -93.0900, latitude: 44.9537 },
+  'baltimore': { longitude: -76.6122, latitude: 39.2904 },
+  'charm city': { longitude: -76.6122, latitude: 39.2904 },
+  'bmore': { longitude: -76.6122, latitude: 39.2904 },
+  'pittsburgh': { longitude: -79.9959, latitude: 40.4406 },
+  'steel city': { longitude: -79.9959, latitude: 40.4406 },
+  'the burgh': { longitude: -79.9959, latitude: 40.4406 },
+  'cleveland': { longitude: -81.6944, latitude: 41.4993 },
+  'the land': { longitude: -81.6944, latitude: 41.4993 },
+  'salt lake city': { longitude: -111.8910, latitude: 40.7608 },
+  'slc': { longitude: -111.8910, latitude: 40.7608 },
+  'san antonio': { longitude: -98.4936, latitude: 29.4241 },
+  'the alamo': { longitude: -98.4861, latitude: 29.4260 },
+  'indianapolis': { longitude: -86.1581, latitude: 39.7684 },
+  'indy': { longitude: -86.1581, latitude: 39.7684 },
+  'kansas city': { longitude: -94.5786, latitude: 39.0997 },
+  'kc': { longitude: -94.5786, latitude: 39.0997 },
+  'memphis': { longitude: -90.0490, latitude: 35.1495 },
+  'buffalo': { longitude: -78.8784, latitude: 42.8864 },
+  'tampa': { longitude: -82.4572, latitude: 27.9506 },
+  'tampa bay': { longitude: -82.4572, latitude: 27.9506 },
+  'raleigh': { longitude: -78.6382, latitude: 35.7796 },
+  'charlotte': { longitude: -80.8431, latitude: 35.2271 },
+  'the queen city': { longitude: -80.8431, latitude: 35.2271 },
+  'jacksonville': { longitude: -81.6557, latitude: 30.3322 },
+  'jax': { longitude: -81.6557, latitude: 30.3322 },
+
+  // ============================================
+  // SCIENTIFIC & RESEARCH FACILITIES
+  // ============================================
+  'cern': { longitude: 6.0554, latitude: 46.2330 },
+  'large hadron collider': { longitude: 6.0554, latitude: 46.2330 },
+  'lhc': { longitude: 6.0554, latitude: 46.2330 },
+  'fermilab': { longitude: -88.2575, latitude: 41.8319 },
+  'fermi national laboratory': { longitude: -88.2575, latitude: 41.8319 },
+  'nasa': { longitude: -95.0930, latitude: 29.5519 },
+  'johnson space center': { longitude: -95.0930, latitude: 29.5519 },
+  'jsc': { longitude: -95.0930, latitude: 29.5519 },
+  'kennedy space center': { longitude: -80.6040, latitude: 28.5728 },
+  'ksc': { longitude: -80.6040, latitude: 28.5728 },
+  'cape canaveral': { longitude: -80.6077, latitude: 28.3922 },
+  'jpl': { longitude: -118.1729, latitude: 34.2013 },
+  'jet propulsion laboratory': { longitude: -118.1729, latitude: 34.2013 },
+  'goddard': { longitude: -76.8527, latitude: 38.9912 },
+  'goddard space flight center': { longitude: -76.8527, latitude: 38.9912 },
+  'mit': { longitude: -71.0921, latitude: 42.3601 },
+  'massachusetts institute of technology': { longitude: -71.0921, latitude: 42.3601 },
+  'stanford': { longitude: -122.1697, latitude: 37.4275 },
+  'stanford university': { longitude: -122.1697, latitude: 37.4275 },
+  'harvard': { longitude: -71.1167, latitude: 42.3770 },
+  'harvard university': { longitude: -71.1167, latitude: 42.3770 },
+  'caltech': { longitude: -118.1253, latitude: 34.1377 },
+  'los alamos': { longitude: -106.3031, latitude: 35.8800 },
+  'los alamos national laboratory': { longitude: -106.3031, latitude: 35.8800 },
+  'lanl': { longitude: -106.3031, latitude: 35.8800 },
+  'oak ridge': { longitude: -84.2696, latitude: 36.0104 },
+  'oak ridge national laboratory': { longitude: -84.2696, latitude: 36.0104 },
+  'sandia': { longitude: -106.5678, latitude: 35.0439 },
+  'sandia national laboratories': { longitude: -106.5678, latitude: 35.0439 },
+  'brookhaven': { longitude: -72.8764, latitude: 40.8703 },
+  'brookhaven national laboratory': { longitude: -72.8764, latitude: 40.8703 },
+  'area 51': { longitude: -115.8111, latitude: 37.2350 },
+  'groom lake': { longitude: -115.8111, latitude: 37.2350 },
+  'pentagon': { longitude: -77.0558, latitude: 38.8719 },
+  'the pentagon': { longitude: -77.0558, latitude: 38.8719 },
 
   // ============================================
   // WORLD CAPITALS
@@ -210,11 +375,12 @@ const KNOWN_LOCATIONS: Record<string, CartographicPosition> = {
   'ord': { longitude: -87.9073, latitude: 41.9742 },
   'ohare': { longitude: -87.9073, latitude: 41.9742 },
   'chicago airport': { longitude: -87.9073, latitude: 41.9742 },
-  'atl': { longitude: -84.4281, latitude: 33.6407 },
   'hartsfield': { longitude: -84.4281, latitude: 33.6407 },
+  'hartsfield jackson': { longitude: -84.4281, latitude: 33.6407 },
   'atlanta airport': { longitude: -84.4281, latitude: 33.6407 },
-  'dfw': { longitude: -97.0380, latitude: 32.8998 },
+  'dfw airport': { longitude: -97.0380, latitude: 32.8998 },
   'dallas airport': { longitude: -97.0380, latitude: 32.8998 },
+  'dallas fort worth airport': { longitude: -97.0380, latitude: 32.8998 },
   'sfo': { longitude: -122.3789, latitude: 37.6213 },
   'san francisco airport': { longitude: -122.3789, latitude: 37.6213 },
   'mia': { longitude: -80.2870, latitude: 25.7959 },
@@ -631,6 +797,12 @@ export class CommandParser {
       }
     }
 
+    // Geometry creation commands with location lookup
+    const geometryResult = this.parseGeometryCreation(normalizedInput);
+    if (geometryResult) {
+      commands.push(geometryResult);
+    }
+
     // Zoom commands
     if (this.matchesPattern(normalizedInput, ['zoom in'])) {
       commands.push({ type: 'camera.zoom', amount: 1000000 });
@@ -663,6 +835,179 @@ export class CommandParser {
       commands: [],
       message: 'Could not understand the command',
     };
+  }
+
+  /**
+   * Parse geometry creation commands with deterministic location lookup
+   * Handles: "add a [color] [geometry] at/in/to [location]"
+   */
+  private parseGeometryCreation(input: string): CesiumCommand | null {
+    // Check for geometry creation patterns
+    const geometryPatterns = [
+      /add\s+(?:a\s+)?(\w+)?\s*(sphere|box|cube|cylinder|marker|point|circle)\s+(?:at|in|to|near|by|on)\s+(.+)/i,
+      /(?:create|place|put)\s+(?:a\s+)?(\w+)?\s*(sphere|box|cube|cylinder|marker|point|circle)\s+(?:at|in|to|near|by|on)\s+(.+)/i,
+      /add\s+(?:a\s+)?(sphere|box|cube|cylinder|marker|point|circle)\s+(?:at|in|to|near|by|on)\s+(.+)/i,
+    ];
+
+    for (const pattern of geometryPatterns) {
+      const match = input.match(pattern);
+      if (match) {
+        let color = 'blue';
+        let geometryType: string;
+        let locationText: string;
+
+        if (match.length === 4) {
+          // Pattern with color: add [color] [geometry] at [location]
+          color = this.isColorName(match[1] || '') ? match[1]!.toLowerCase() : 'blue';
+          geometryType = match[2]!.toLowerCase();
+          locationText = match[3]!.toLowerCase();
+        } else {
+          // Pattern without color: add [geometry] at [location]
+          geometryType = match[1]!.toLowerCase();
+          locationText = match[2]!.toLowerCase();
+        }
+
+        // Also check for color in the input string if not yet found
+        if (color === 'blue') {
+          const colorMatch = input.match(/\b(red|green|blue|yellow|orange|purple|pink|cyan|white|black|gray|grey)\b/i);
+          if (colorMatch) {
+            color = colorMatch[1]!.toLowerCase();
+          }
+        }
+
+        // Extract location from the text
+        const location = this.extractLocation(locationText);
+        if (!location) {
+          // Try extracting from full input
+          const fullLocation = this.extractLocation(input);
+          if (!fullLocation) {
+            return null;
+          }
+          Object.assign(location || {}, fullLocation);
+        }
+
+        // Normalize geometry type
+        if (geometryType === 'cube') geometryType = 'box';
+        if (geometryType === 'marker') geometryType = 'point';
+
+        // Create the appropriate geometry command
+        return this.createGeometryCommand(geometryType, location!, color);
+      }
+    }
+
+    return null;
+  }
+
+  private isColorName(word: string): boolean {
+    const colors = ['red', 'green', 'blue', 'yellow', 'orange', 'purple', 'pink', 'cyan', 'white', 'black', 'gray', 'grey', 'magenta', 'lime', 'navy', 'teal', 'maroon', 'olive'];
+    return colors.includes(word.toLowerCase());
+  }
+
+  private createGeometryCommand(geometryType: string, location: CartographicPosition, color: string): CesiumCommand {
+    const timestamp = Date.now();
+    const rgba = this.colorNameToRGBA(color);
+
+    switch (geometryType) {
+      case 'sphere':
+        return {
+          type: 'entity.add',
+          entity: {
+            id: `ellipsoid_${timestamp}`,
+            name: `${color.charAt(0).toUpperCase() + color.slice(1)} Sphere`,
+            position: {
+              cartographicDegrees: [location.longitude, location.latitude, location.height || 50000],
+            },
+            ellipsoid: {
+              radii: { cartesian: [50000, 50000, 50000] },
+              material: { solidColor: { color: { rgba } } },
+              outline: true,
+              outlineColor: { rgba: [255, 255, 255, 255] },
+              show: true,
+            },
+          },
+        };
+
+      case 'box':
+        return {
+          type: 'entity.add',
+          entity: {
+            id: `box_${timestamp}`,
+            name: `${color.charAt(0).toUpperCase() + color.slice(1)} Box`,
+            position: {
+              cartographicDegrees: [location.longitude, location.latitude, location.height || 50000],
+            },
+            box: {
+              dimensions: { cartesian: [50000, 50000, 100000] },
+              material: { solidColor: { color: { rgba } } },
+              outline: true,
+              outlineColor: { rgba: [255, 255, 255, 255] },
+              show: true,
+            },
+          },
+        };
+
+      case 'cylinder':
+        return {
+          type: 'entity.add',
+          entity: {
+            id: `cylinder_${timestamp}`,
+            name: `${color.charAt(0).toUpperCase() + color.slice(1)} Cylinder`,
+            position: {
+              cartographicDegrees: [location.longitude, location.latitude, location.height || 50000],
+            },
+            cylinder: {
+              length: 100000,
+              topRadius: 25000,
+              bottomRadius: 25000,
+              material: { solidColor: { color: { rgba } } },
+              outline: true,
+              outlineColor: { rgba: [255, 255, 255, 255] },
+              show: true,
+            },
+          },
+        };
+
+      case 'circle':
+        return {
+          type: 'entity.add',
+          entity: {
+            id: `ellipse_${timestamp}`,
+            name: `${color.charAt(0).toUpperCase() + color.slice(1)} Circle`,
+            position: {
+              cartographicDegrees: [location.longitude, location.latitude, 0],
+            },
+            ellipse: {
+              semiMajorAxis: 50000,
+              semiMinorAxis: 50000,
+              height: 0,
+              material: { solidColor: { color: { rgba } } },
+              outline: true,
+              outlineColor: { rgba: [255, 255, 255, 255] },
+              show: true,
+            },
+          },
+        };
+
+      case 'point':
+      default:
+        return {
+          type: 'entity.add',
+          entity: {
+            id: `point_${timestamp}`,
+            name: `${color.charAt(0).toUpperCase() + color.slice(1)} Marker`,
+            position: {
+              cartographicDegrees: [location.longitude, location.latitude, 0],
+            },
+            point: {
+              color: { rgba },
+              pixelSize: 20,
+              outlineColor: { rgba: [255, 255, 255, 255] },
+              outlineWidth: 3,
+              show: true,
+            },
+          },
+        };
+    }
   }
 
   private toolCallToCommand(toolCall: ToolCall): CesiumCommand | null {
@@ -827,6 +1172,158 @@ export class CommandParser {
             },
           },
         };
+
+      case 'addSphere':
+        return {
+          type: 'entity.add',
+          entity: {
+            id: `ellipsoid_${Date.now()}`,
+            name: (args['name'] as string) || 'Sphere',
+            position: {
+              cartographicDegrees: [
+                args['longitude'] as number,
+                args['latitude'] as number,
+                (args['height'] as number) || 0,
+              ],
+            },
+            ellipsoid: {
+              radii: {
+                cartesian: [
+                  args['radius'] as number,
+                  args['radius'] as number,
+                  args['radius'] as number,
+                ],
+              },
+              material: {
+                solidColor: {
+                  color: { rgba: this.colorNameToRGBA((args['color'] as string) || 'blue') },
+                },
+              },
+              outline: true,
+              outlineColor: { rgba: [255, 255, 255, 255] },
+              show: true,
+            },
+          },
+        };
+
+      case 'addBox':
+        return {
+          type: 'entity.add',
+          entity: {
+            id: `box_${Date.now()}`,
+            name: (args['name'] as string) || 'Box',
+            position: {
+              cartographicDegrees: [
+                args['longitude'] as number,
+                args['latitude'] as number,
+                (args['height'] as number) || 0,
+              ],
+            },
+            box: {
+              dimensions: {
+                cartesian: [
+                  (args['dimensionX'] as number) || 100000,
+                  (args['dimensionY'] as number) || 100000,
+                  (args['dimensionZ'] as number) || 100000,
+                ],
+              },
+              material: {
+                solidColor: {
+                  color: { rgba: this.colorNameToRGBA((args['color'] as string) || 'blue') },
+                },
+              },
+              outline: true,
+              outlineColor: { rgba: [255, 255, 255, 255] },
+              show: true,
+            },
+          },
+        };
+
+      case 'addCylinder':
+        return {
+          type: 'entity.add',
+          entity: {
+            id: `cylinder_${Date.now()}`,
+            name: (args['name'] as string) || 'Cylinder',
+            position: {
+              cartographicDegrees: [
+                args['longitude'] as number,
+                args['latitude'] as number,
+                (args['height'] as number) || 0,
+              ],
+            },
+            cylinder: {
+              length: (args['length'] as number) || 100000,
+              topRadius: (args['topRadius'] as number) || 50000,
+              bottomRadius: (args['bottomRadius'] as number) || 50000,
+              material: {
+                solidColor: {
+                  color: { rgba: this.colorNameToRGBA((args['color'] as string) || 'blue') },
+                },
+              },
+              outline: true,
+              outlineColor: { rgba: [255, 255, 255, 255] },
+              show: true,
+            },
+          },
+        };
+
+      case 'addWall': {
+        const positions = args['positions'] as Array<{ longitude: number; latitude: number }>;
+        const coords: number[] = [];
+        for (const pos of positions) {
+          coords.push(pos.longitude, pos.latitude, 0);
+        }
+        return {
+          type: 'entity.add',
+          entity: {
+            id: `wall_${Date.now()}`,
+            name: (args['name'] as string) || 'Wall',
+            wall: {
+              positions: { cartographicDegrees: coords },
+              maximumHeights: args['maximumHeights'] as number[],
+              minimumHeights: args['minimumHeights'] as number[],
+              material: {
+                solidColor: {
+                  color: { rgba: this.colorNameToRGBA((args['color'] as string) || 'gray') },
+                },
+              },
+              outline: true,
+              outlineColor: { rgba: [0, 0, 0, 255] },
+              show: true,
+            },
+          },
+        };
+      }
+
+      case 'addCorridor': {
+        const positions = args['positions'] as Array<{ longitude: number; latitude: number }>;
+        const coords: number[] = [];
+        for (const pos of positions) {
+          coords.push(pos.longitude, pos.latitude, 0);
+        }
+        return {
+          type: 'entity.add',
+          entity: {
+            id: `corridor_${Date.now()}`,
+            name: (args['name'] as string) || 'Corridor',
+            corridor: {
+              positions: { cartographicDegrees: coords },
+              width: (args['width'] as number) || 10000,
+              height: 0,
+              extrudedHeight: args['extrudedHeight'] as number | undefined,
+              material: {
+                solidColor: {
+                  color: { rgba: this.colorNameToRGBA((args['color'] as string) || 'blue') },
+                },
+              },
+              outline: true,
+              outlineColor: { rgba: [255, 255, 255, 255] },
+              show: true,
+            },
+          },
+        };
+      }
 
       case 'removeEntity':
         return {

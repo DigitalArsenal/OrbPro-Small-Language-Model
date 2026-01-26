@@ -1,0 +1,18 @@
+# Emscripten SDK
+emsdk/
+
+# Build outputs
+mcp-server-cpp/build/
+mcp-server-cpp/dist/
+
+# Generated FlatBuffers headers
+mcp-server-cpp/include/generated/
+
+# Node modules (if any packages have them)
+*/node_modules/
+
+# CMake cache files
+CMakeCache.txt
+CMakeFiles/
+cmake_install.cmake
+Makefile

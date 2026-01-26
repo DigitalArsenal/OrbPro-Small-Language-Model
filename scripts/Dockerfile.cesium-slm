@@ -1,6 +1,6 @@
 # MLC-LLM Compilation Environment for OrbPro Cesium SLM
 # This Dockerfile is static - don't regenerate it to preserve layer caching
-FROM --platform=linux/amd64 ubuntu:22.04
+FROM ubuntu:22.04
 
 ENV DEBIAN_FRONTEND=noninteractive
 
@@ -11,20 +11,27 @@ RUN apt-get update && apt-get install -y \
     curl wget \
     && rm -rf /var/lib/apt/lists/*
 
-# Install Emscripten (cached in Docker layer)
+# Install Emscripten
 RUN git clone https://github.com/emscripten-core/emsdk.git /opt/emsdk && \
     cd /opt/emsdk && \
     ./emsdk install latest && \
     ./emsdk activate latest
 
-# Set up Emscripten environment permanently
-ENV PATH="/opt/emsdk:/opt/emsdk/upstream/emscripten:/opt/emsdk/node/18.20.3_64bit/bin:${PATH}"
-ENV EMSDK="/opt/emsdk"
-ENV EMSDK_NODE="/opt/emsdk/node/18.20.3_64bit/bin/node"
-ENV EM_CONFIG="/root/.emscripten"
+# Set up Emscripten config and PATH in one step to capture node version
+RUN cd /opt/emsdk && \
+    . ./emsdk_env.sh && \
+    echo "EMSDK = '/opt/emsdk'" > /root/.emscripten && \
+    echo "NODE_JS = '$(which node)'" >> /root/.emscripten && \
+    echo "LLVM_ROOT = '/opt/emsdk/upstream/bin'" >> /root/.emscripten && \
+    echo "BINARYEN_ROOT = '/opt/emsdk/upstream'" >> /root/.emscripten && \
+    echo "EMSCRIPTEN_ROOT = '/opt/emsdk/upstream/emscripten'" >> /root/.emscripten && \
+    cat /root/.emscripten && \
+    emcc --version
 
-# Create emscripten config
-RUN /opt/emsdk/emsdk construct_env
+# Set PATH permanently (node is in /opt/emsdk/node/*/bin)
+ENV PATH="/opt/emsdk/node/22.16.0_64bit/bin:/opt/emsdk:/opt/emsdk/upstream/emscripten:/opt/emsdk/upstream/bin:${PATH}"
+ENV EMSDK="/opt/emsdk"
+ENV EM_CONFIG="/root/.emscripten"
 
 # Install MLC-LLM nightly wheels for CPU (x86_64)
 RUN pip3 install --upgrade pip && \
@@ -34,13 +41,11 @@ RUN pip3 install --upgrade pip && \
 # Install other dependencies
 RUN pip3 install transformers safetensors sentencepiece huggingface_hub
 
-# Clone MLC-LLM source (cached in Docker layer)
+# Clone MLC-LLM source (needed for WASM runtime)
 RUN git clone --recursive https://github.com/mlc-ai/mlc-llm.git /opt/mlc-llm
 
-# Build WASM runtime - this is the critical step
-# Must source emsdk_env.sh to get emcc in PATH
+# Build WASM runtime
 RUN cd /opt/mlc-llm && \
-    . /opt/emsdk/emsdk_env.sh && \
     ./web/prep_emcc_deps.sh && \
     ls -la /opt/mlc-llm/web/dist/wasm/
 

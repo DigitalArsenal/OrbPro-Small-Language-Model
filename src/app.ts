@@ -85,7 +85,7 @@ export class CesiumSLMApp {
       this.modelSelector = new ModelSelector({
         containerId: config.modelSelectorContainer,
         onSelect: (modelId) => this.loadModel(modelId),
-        defaultModel: RECOMMENDED_MODELS.small[1], // Qwen2.5-1.5B by default
+        defaultModel: RECOMMENDED_MODELS.trained[0], // Use trained Cesium model
       });
     } catch (error) {
       throw new Error(`ModelSelector init failed: ${error instanceof Error ? error.message : error}`);
@@ -115,9 +115,16 @@ export class CesiumSLMApp {
     // Add welcome message
     this.chatInterface.addMessage({
       role: 'system',
-      content: 'Welcome! Select a language model above to get started. Once loaded, you can control the globe using natural language.',
+      content: 'Loading Cesium language model...',
       timestamp: new Date(),
     });
+
+    // Auto-load the trained model on startup
+    const defaultModel = RECOMMENDED_MODELS.trained[0];
+    if (defaultModel) {
+      // Use setTimeout to allow the UI to render first
+      setTimeout(() => this.loadModel(defaultModel), 100);
+    }
   }
 
   private async initializeCesium(containerId: string, token?: string): Promise<void> {
@@ -276,13 +283,26 @@ export class CesiumSLMApp {
     }
 
     try {
-      // Generate response from LLM
-      const response = await this.llmEngine.generate(message, this.conversationHistory as never);
+      // ALWAYS try rule-based parsing first for deterministic, reliable results
+      // This handles navigation AND geometry creation with correct coordinates
+      const ruleBasedResult = this.commandParser.parseNaturalLanguage(message);
 
-      // Add response to conversation history
-      this.conversationHistory.push({ role: 'assistant', content: response.content });
+      if (ruleBasedResult.success && ruleBasedResult.commands.length > 0) {
+        await this.executeCommands(ruleBasedResult.commands);
+        this.chatInterface.addMessage({
+          role: 'assistant',
+          content: `Done`,
+          timestamp: new Date(),
+          toolCalls: ruleBasedResult.commands.map(c => ({ name: c.type, arguments: c })),
+        });
+        return;
+      }
 
-      // Check for tool calls
+      // Only fall back to LLM for complex queries that rule-based parser can't handle
+      // (multi-step commands, queries, or locations not in our database)
+      const response = await this.llmEngine.generate(message);
+
+      // Check for tool calls from LLM
       if (response.toolCalls && response.toolCalls.length > 0) {
         const parseResult = this.commandParser.parseToolCalls(response.toolCalls);
 
@@ -297,7 +317,7 @@ export class CesiumSLMApp {
           toolCalls: response.toolCalls.map(tc => ({ name: tc.name, arguments: tc.arguments })),
         });
       } else {
-        // No tool calls - just a text response
+        // Just a text response from LLM
         this.chatInterface.addMessage({
           role: 'assistant',
           content: response.content,

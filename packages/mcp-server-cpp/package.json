@@ -1,0 +1,32 @@
+{
+  "name": "@cesium-slm/mcp-server-wasm",
+  "version": "1.0.0",
+  "description": "Cesium MCP Server compiled to WebAssembly from C++",
+  "type": "module",
+  "main": "dist/cesium-mcp-wasm.js",
+  "exports": {
+    ".": "./dist/cesium-mcp-wasm.js",
+    "./wasm": "./dist/cesium-mcp-wasm.wasm"
+  },
+  "files": [
+    "dist/cesium-mcp-wasm.js",
+    "dist/cesium-mcp-wasm.wasm",
+    "dist/cesium-mcp-wasm.worker.js"
+  ],
+  "scripts": {
+    "build": "./scripts/build-wasm.sh",
+    "build:debug": "./scripts/build-wasm.sh debug",
+    "build:native": "./scripts/build-native.sh",
+    "generate-headers": "node scripts/generate-headers.mjs",
+    "test": "./scripts/build-native.sh && ./build-native/cesium-mcp-wasm"
+  },
+  "keywords": [
+    "cesium",
+    "mcp",
+    "wasm",
+    "webassembly",
+    "flatbuffers"
+  ],
+  "author": "",
+  "license": "MIT"
+}

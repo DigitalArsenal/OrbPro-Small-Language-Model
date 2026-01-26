@@ -3,6 +3,26 @@
  * Browser-based Small Language Model for CesiumJS Control
  */
 
+// DEBUG: Intercept ALL fetch requests to diagnose web-llm loading issues
+const originalFetch = window.fetch.bind(window);
+window.fetch = async (input: RequestInfo | URL, init?: RequestInit): Promise<Response> => {
+  const url = typeof input === 'string' ? input : input instanceof URL ? input.href : input.url;
+  console.log(`[FETCH] >>> ${url}`);
+  try {
+    const response = await originalFetch(input, init);
+    const contentType = response.headers.get('content-type') || 'unknown';
+    console.log(`[FETCH] <<< ${response.status} ${response.statusText} [${contentType}] ${url}`);
+    // Clone to check if it's HTML when expecting JSON
+    if (url.endsWith('.json') && contentType.includes('html')) {
+      console.error(`[FETCH] ERROR: Got HTML for JSON request: ${url}`);
+    }
+    return response;
+  } catch (error) {
+    console.error(`[FETCH] FAILED: ${url}`, error);
+    throw error;
+  }
+};
+
 import { CesiumSLMApp } from './app';
 
 // Initialize when DOM is ready

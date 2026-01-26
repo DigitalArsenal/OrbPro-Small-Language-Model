@@ -3,6 +3,10 @@ import wasm from 'vite-plugin-wasm';
 
 export default defineConfig({
   plugins: [wasm()],
+  resolve: {
+    // Follow symlinks in public/models
+    preserveSymlinks: false,
+  },
   build: {
     target: 'esnext',
     outDir: 'dist',
@@ -20,7 +24,9 @@ export default defineConfig({
       'Cross-Origin-Resource-Policy': 'cross-origin',
     },
     fs: {
-      allow: ['.'],
+      // Allow serving files from symlinked model directory
+      allow: ['.', 'mlc-models'],
+      strict: false,
     },
   },
 });

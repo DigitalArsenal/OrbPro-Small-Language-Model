@@ -190,6 +190,150 @@ The system exposes the following MCP tools:
 | `pauseAnimation` | Pause animation |
 | `generateCZML` | Generate CZML document |
 
+## Training & Deployment Pipeline
+
+This section describes how to train and deploy your own custom CesiumJS language model.
+
+### Prerequisites
+
+```bash
+# Python dependencies (for training)
+pip install mlx mlx-lm
+
+# Node dependencies (for data generation)
+npm install
+
+# Docker (for WebGPU compilation)
+# Install from: https://www.docker.com/products/docker-desktop
+```
+
+### Step 1: Generate Training Data
+
+Generate synthetic training data from the tool schemas:
+
+```bash
+cd training
+npx tsx generate-training-data.ts
+```
+
+This creates `generated-training-data.jsonl` with ~88,000 examples covering:
+- All CesiumJS tools (flyTo, addPoint, addSphere, etc.)
+- Known locations (cities, landmarks, airports, scientific facilities)
+- Various phrasings and parameter combinations
+
+### Step 2: Train the Model (MLX - Apple Silicon)
+
+Training uses Apple's MLX framework for fast Apple Silicon training:
+
+```bash
+cd training
+python3 finetune_mlx.py \
+  --dataset generated-training-data.jsonl \
+  --output-dir cesium-qwen-lora-mlx \
+  --num-epochs 3 \
+  --batch-size 4
+```
+
+Monitor progress:
+```bash
+./progress.sh
+```
+
+Training takes ~2 hours on Apple Silicon (M1/M2/M3).
+
+The script automatically:
+1. Converts data to MLX format
+2. Trains LoRA adapters
+3. Fuses adapters with base model
+4. Saves merged model to `cesium-qwen-lora-mlx/merged/`
+
+### Step 3: Test the Model
+
+Test the trained model locally:
+
+```bash
+cd training
+python3 -c "
+from mlx_lm import load, generate
+
+model, tokenizer = load('cesium-qwen-lora-mlx/merged')
+
+prompt = 'fly to CERN'
+messages = [
+    {'role': 'system', 'content': 'You are a CesiumJS controller assistant. Convert natural language commands to tool calls.'},
+    {'role': 'user', 'content': prompt}
+]
+formatted = tokenizer.apply_chat_template(messages, tokenize=False, add_generation_prompt=True)
+response = generate(model, tokenizer, prompt=formatted, max_tokens=256)
+print(response)
+"
+```
+
+### Step 4: Compile for WebGPU (Docker)
+
+Compile the model for browser deployment using MLC-LLM:
+
+```bash
+./scripts/compile-cesium-slm-docker.sh
+```
+
+This requires Docker Desktop running with at least 16GB disk space.
+
+The script:
+1. Builds a Docker image with Emscripten + MLC-LLM
+2. Converts weights to quantized format (q4f16_1 = ~300MB)
+3. Compiles to WebGPU WASM
+4. Outputs to `mlc-models/OrbPro-Cesium-SLM-0.5B-q4f16_1-MLC/`
+
+All downloads are cached in `.cache/mlc-compile/` for faster subsequent builds.
+
+### Step 5: Upload to HuggingFace
+
+Upload the compiled model:
+
+```bash
+cd mlc-models/OrbPro-Cesium-SLM-0.5B-q4f16_1-MLC
+
+huggingface-cli login
+huggingface-cli repo create OrbPro-Cesium-SLM-0.5B-q4f16_1-MLC --type model
+huggingface-cli upload YOUR_USERNAME/OrbPro-Cesium-SLM-0.5B-q4f16_1-MLC .
+```
+
+### Step 6: Update Application
+
+Update `src/llm/web-llm-engine.ts` with your HuggingFace model URL.
+
+### Complete Pipeline Script
+
+Run the entire pipeline:
+
+```bash
+# Generate data
+cd training && npx tsx generate-training-data.ts
+
+# Train (takes ~2 hours)
+python3 finetune_mlx.py --dataset generated-training-data.jsonl --output-dir cesium-qwen-lora-mlx --num-epochs 3
+
+# Compile for WebGPU (requires Docker)
+cd .. && ./scripts/compile-cesium-slm-docker.sh
+
+# Upload
+cd mlc-models/OrbPro-Cesium-SLM-0.5B-q4f16_1-MLC
+huggingface-cli upload YOUR_USERNAME/OrbPro-Cesium-SLM-0.5B-q4f16_1-MLC .
+```
+
+### Caching
+
+All large downloads are cached for fast subsequent runs:
+
+| Cache Location | Contents |
+|----------------|----------|
+| `~/.cache/huggingface/` | Base model weights (~1GB) |
+| `.cache/mlc-compile/` | Docker build cache |
+| `training/cesium-qwen-lora-mlx/` | LoRA checkpoints |
+
+To start fresh, delete these directories.
+
 ## Development
 
 ```bash

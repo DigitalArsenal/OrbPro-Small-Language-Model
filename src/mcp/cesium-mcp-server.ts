@@ -7,6 +7,16 @@ import { z } from 'zod';
 import type { BrowserTransport, MCPMessage } from './browser-transport';
 import type { CesiumCommand, CartographicPosition, CZMLPacket } from '../cesium/types';
 import * as czmlGenerator from '../cesium/czml-generator';
+import { KNOWN_LOCATIONS } from '../llm/command-parser';
+
+/**
+ * Resolve a location name to coordinates using the built-in database.
+ * Returns null if the location is not found.
+ */
+function resolveLocationName(locationName: string): CartographicPosition | null {
+  const normalized = locationName.toLowerCase().trim();
+  return KNOWN_LOCATIONS[normalized] || null;
+}
 
 // Schema definitions for tool inputs
 const positionSchema = z.object({
@@ -21,25 +31,6 @@ const colorSchema = z.enum([
 ]);
 
 // Tool definitions
-// Default values for tool parameters
-const DEFAULTS = {
-  flyTo: { height: 500000, duration: 2 },
-  lookAt: { height: 0, range: 100000 },
-  point: { color: 'yellow', size: 10 },
-  label: { color: 'white' },
-  polyline: { color: 'blue', width: 2 },
-  polygon: { color: 'blue' },
-  circle: { color: 'blue', height: 0 },
-  sphere: { color: 'blue', height: 0 },
-  ellipsoid: { color: 'blue', height: 0 },
-  cylinder: { color: 'blue' },
-  box: { color: 'blue' },
-  model: { scale: 1 },
-  corridor: { color: 'blue' },
-  rectangle: { color: 'blue' },
-  wall: { color: 'gray' },
-} as const;
-
 const tools = {
   flyTo: {
     name: 'flyTo',
@@ -896,6 +887,88 @@ const tools = {
       style: z.string().optional().describe('WMTS style name (default: "default")'),
       format: z.string().optional().describe('Tile format (default: "image/jpeg")'),
       tileMatrixSetID: z.string().optional().describe('Tile matrix set identifier'),
+    }),
+  },
+
+  // ============================================
+  // LOCATION-AWARE TOOLS (use built-in location database)
+  // ============================================
+  resolveLocation: {
+    name: 'resolveLocation',
+    description: 'Resolve a location name (city, landmark, etc.) to geographic coordinates. Use this to get coordinates for places like "Paris", "Tokyo", "Eiffel Tower", "Grand Canyon", etc.',
+    inputSchema: z.object({
+      location: z.string().describe('Location name to resolve (e.g., "Seattle", "Eiffel Tower", "Grand Canyon")'),
+    }),
+  },
+  listLocations: {
+    name: 'listLocations',
+    description: 'List all known location names that can be resolved to coordinates. Use this to discover what locations are available.',
+    inputSchema: z.object({
+      filter: z.string().optional().describe('Optional filter string to search location names'),
+    }),
+  },
+  flyToLocation: {
+    name: 'flyToLocation',
+    description: 'Fly the camera to a named location. PREFERRED over flyTo when you know the location name (e.g., "Seattle", "Tokyo", "Grand Canyon").',
+    inputSchema: z.object({
+      location: z.string().describe('Location name (e.g., "Seattle", "Tokyo", "Eiffel Tower")'),
+      height: z.number().positive().optional().describe('Camera height in meters (default: 500000)'),
+      duration: z.number().positive().optional().describe('Flight duration in seconds (default: 2)'),
+    }),
+  },
+  addSphereAtLocation: {
+    name: 'addSphereAtLocation',
+    description: 'Add a 3D sphere at a named location. PREFERRED over addSphere when you know the location name.',
+    inputSchema: z.object({
+      location: z.string().describe('Location name (e.g., "Seattle", "Tokyo", "CERN")'),
+      radius: z.number().positive().describe('Sphere radius in meters'),
+      height: z.number().optional().describe('Height above ground in meters (default: sphere radius)'),
+      name: z.string().optional().describe('Name for the sphere'),
+      color: colorSchema.optional().describe('Sphere color (default: blue)'),
+    }),
+  },
+  addBoxAtLocation: {
+    name: 'addBoxAtLocation',
+    description: 'Add a 3D box at a named location. PREFERRED over addBox when you know the location name.',
+    inputSchema: z.object({
+      location: z.string().describe('Location name (e.g., "Seattle", "Space Needle")'),
+      dimensionX: z.number().positive().describe('Width in meters (X dimension)'),
+      dimensionY: z.number().positive().describe('Depth in meters (Y dimension)'),
+      dimensionZ: z.number().positive().describe('Height in meters (Z dimension)'),
+      height: z.number().optional().describe('Height above ground for the box center'),
+      name: z.string().optional().describe('Name for the box'),
+      color: colorSchema.optional().describe('Box color (default: blue)'),
+    }),
+  },
+  addCylinderAtLocation: {
+    name: 'addCylinderAtLocation',
+    description: 'Add a 3D cylinder at a named location. Set topRadius to 0 for a cone.',
+    inputSchema: z.object({
+      location: z.string().describe('Location name'),
+      length: z.number().positive().describe('Height of the cylinder in meters'),
+      topRadius: z.number().min(0).describe('Top radius in meters (0 for cone)'),
+      bottomRadius: z.number().positive().describe('Bottom radius in meters'),
+      name: z.string().optional().describe('Name for the cylinder'),
+      color: colorSchema.optional().describe('Cylinder color (default: blue)'),
+    }),
+  },
+  addPointAtLocation: {
+    name: 'addPointAtLocation',
+    description: 'Add a point marker at a named location.',
+    inputSchema: z.object({
+      location: z.string().describe('Location name'),
+      name: z.string().optional().describe('Label for the point'),
+      color: colorSchema.optional().describe('Point color (default: yellow)'),
+      size: z.number().positive().optional().describe('Point size in pixels (default: 10)'),
+    }),
+  },
+  addLabelAtLocation: {
+    name: 'addLabelAtLocation',
+    description: 'Add a text label at a named location.',
+    inputSchema: z.object({
+      location: z.string().describe('Location name'),
+      text: z.string().describe('Label text'),
+      color: colorSchema.optional().describe('Label color (default: white)'),
     }),
   },
 };
@@ -2151,6 +2224,177 @@ export class CesiumMCPServer {
         return this.commandHandler(command);
       }
 
+      // ============================================
+      // LOCATION-AWARE TOOLS
+      // ============================================
+      case 'resolveLocation': {
+        const args = input as ToolInput<'resolveLocation'>;
+        const coords = resolveLocationName(args.location);
+        if (coords) {
+          return {
+            success: true,
+            message: `Resolved "${args.location}" to coordinates`,
+            data: {
+              location: args.location,
+              longitude: coords.longitude,
+              latitude: coords.latitude,
+              height: coords.height,
+            },
+          };
+        }
+        return {
+          success: false,
+          message: `Location "${args.location}" not found in database. Use listLocations to see available locations.`,
+        };
+      }
+
+      case 'listLocations': {
+        const args = input as ToolInput<'listLocations'>;
+        let locations = Object.keys(KNOWN_LOCATIONS);
+        if (args.filter) {
+          const filterLower = args.filter.toLowerCase();
+          locations = locations.filter(loc => loc.includes(filterLower));
+        }
+        return {
+          success: true,
+          message: `Found ${locations.length} locations`,
+          data: {
+            count: locations.length,
+            locations: locations.sort(),
+          },
+        };
+      }
+
+      case 'flyToLocation': {
+        const args = input as ToolInput<'flyToLocation'>;
+        const coords = resolveLocationName(args.location);
+        if (!coords) {
+          return {
+            success: false,
+            message: `Location "${args.location}" not found. Use listLocations to see available locations.`,
+          };
+        }
+        const command: CesiumCommand = {
+          type: 'camera.flyTo',
+          destination: {
+            longitude: coords.longitude,
+            latitude: coords.latitude,
+            height: args.height || 500000,
+          },
+          duration: args.duration,
+        };
+        return this.commandHandler(command);
+      }
+
+      case 'addSphereAtLocation': {
+        const args = input as ToolInput<'addSphereAtLocation'>;
+        const coords = resolveLocationName(args.location);
+        if (!coords) {
+          return {
+            success: false,
+            message: `Location "${args.location}" not found. Use listLocations to see available locations.`,
+          };
+        }
+        const entity = czmlGenerator.createSphere(
+          { longitude: coords.longitude, latitude: coords.latitude, height: args.height ?? args.radius },
+          args.radius,
+          { name: args.name || `Sphere at ${args.location}`, color: args.color }
+        );
+        const command: CesiumCommand = {
+          type: 'entity.add',
+          entity,
+        };
+        return this.commandHandler(command);
+      }
+
+      case 'addBoxAtLocation': {
+        const args = input as ToolInput<'addBoxAtLocation'>;
+        const coords = resolveLocationName(args.location);
+        if (!coords) {
+          return {
+            success: false,
+            message: `Location "${args.location}" not found. Use listLocations to see available locations.`,
+          };
+        }
+        const entity = czmlGenerator.createBox(
+          { longitude: coords.longitude, latitude: coords.latitude, height: args.height },
+          { x: args.dimensionX, y: args.dimensionY, z: args.dimensionZ },
+          { name: args.name || `Box at ${args.location}`, color: args.color }
+        );
+        const command: CesiumCommand = {
+          type: 'entity.add',
+          entity,
+        };
+        return this.commandHandler(command);
+      }
+
+      case 'addCylinderAtLocation': {
+        const args = input as ToolInput<'addCylinderAtLocation'>;
+        const coords = resolveLocationName(args.location);
+        if (!coords) {
+          return {
+            success: false,
+            message: `Location "${args.location}" not found. Use listLocations to see available locations.`,
+          };
+        }
+        const entity = czmlGenerator.createCylinder(
+          { longitude: coords.longitude, latitude: coords.latitude },
+          {
+            length: args.length,
+            topRadius: args.topRadius,
+            bottomRadius: args.bottomRadius,
+            name: args.name || `Cylinder at ${args.location}`,
+            color: args.color,
+          }
+        );
+        const command: CesiumCommand = {
+          type: 'entity.add',
+          entity,
+        };
+        return this.commandHandler(command);
+      }
+
+      case 'addPointAtLocation': {
+        const args = input as ToolInput<'addPointAtLocation'>;
+        const coords = resolveLocationName(args.location);
+        if (!coords) {
+          return {
+            success: false,
+            message: `Location "${args.location}" not found. Use listLocations to see available locations.`,
+          };
+        }
+        const entity = czmlGenerator.createPoint(
+          { longitude: coords.longitude, latitude: coords.latitude },
+          { name: args.name || args.location, color: args.color, pixelSize: args.size }
+        );
+        const command: CesiumCommand = {
+          type: 'entity.add',
+          entity,
+        };
+        return this.commandHandler(command);
+      }
+
+      case 'addLabelAtLocation': {
+        const args = input as ToolInput<'addLabelAtLocation'>;
+        const coords = resolveLocationName(args.location);
+        if (!coords) {
+          return {
+            success: false,
+            message: `Location "${args.location}" not found. Use listLocations to see available locations.`,
+          };
+        }
+        const entity = czmlGenerator.createLabel(
+          { longitude: coords.longitude, latitude: coords.latitude },
+          args.text,
+          { fillColor: args.color }
+        );
+        const command: CesiumCommand = {
+          type: 'entity.add',
+          entity,
+        };
+        return this.commandHandler(command);
+      }
+
       default:
         throw new Error(`Tool not implemented: ${name}`);
     }
@@ -2175,6 +2419,12 @@ export class CesiumMCPServer {
           uri: 'cesium://camera',
           name: 'Camera State',
           description: 'Current camera position and orientation',
+          mimeType: 'application/json',
+        },
+        {
+          uri: 'cesium://locations',
+          name: 'Known Locations',
+          description: 'Database of all known location names and their coordinates',
           mimeType: 'application/json',
         },
       ],
@@ -2209,6 +2459,21 @@ export class CesiumMCPServer {
             uri,
             mimeType: 'application/json',
             text: JSON.stringify({ position: { longitude: 0, latitude: 0, height: 10000000 } }),
+          }],
+        };
+      case 'cesium://locations':
+        return {
+          contents: [{
+            uri,
+            mimeType: 'application/json',
+            text: JSON.stringify({
+              count: Object.keys(KNOWN_LOCATIONS).length,
+              locations: Object.entries(KNOWN_LOCATIONS).map(([name, coords]) => ({
+                name,
+                longitude: coords.longitude,
+                latitude: coords.latitude,
+              })),
+            }),
           }],
         };
       default:

@@ -1,18 +1,31 @@
 #!/bin/bash
 # Show MLX training progress
+# Usage: ./progress.sh [output_file] [total_iters]
 
-TOTAL=59523
-OUTPUT_FILE="/private/tmp/claude/-Users-tj-software-OrbPro-Small-Language-Model/tasks/be0c933.output"
+# Try to find the output file
+if [ -n "$1" ]; then
+    OUTPUT_FILE="$1"
+elif [ -f "/private/tmp/claude/-Users-tj-software-OrbPro-Small-Language-Model/tasks/be0c933.output" ]; then
+    OUTPUT_FILE="/private/tmp/claude/-Users-tj-software-OrbPro-Small-Language-Model/tasks/be0c933.output"
+else
+    # Find most recent training output
+    OUTPUT_FILE=$(ls -t /private/tmp/claude/-Users-tj-software-OrbPro-Small-Language-Model/tasks/*.output 2>/dev/null | head -1)
+fi
 
-if [ ! -f "$OUTPUT_FILE" ]; then
-    echo "Training output not found at $OUTPUT_FILE"
+if [ -z "$OUTPUT_FILE" ] || [ ! -f "$OUTPUT_FILE" ]; then
+    echo "No training output found"
+    echo "Usage: ./progress.sh <output_file> [total_iters]"
     exit 1
 fi
 
-LAST_LINE=$(grep "^Iter " "$OUTPUT_FILE" | tail -1)
+# Get total iterations from arg or default
+TOTAL="${2:-59523}"
+
+LAST_LINE=$(grep "^Iter " "$OUTPUT_FILE" 2>/dev/null | tail -1)
 
 if [ -z "$LAST_LINE" ]; then
     echo "No training iterations found yet"
+    echo "File: $OUTPUT_FILE"
     exit 0
 fi
 

@@ -11,6 +11,10 @@ export interface LLMConfig {
   temperature?: number;
   topP?: number;
   maxTokens?: number;
+  /** Frequency penalty to prevent repetition (default: 0.5) */
+  frequencyPenalty?: number;
+  /** Presence penalty to encourage new topics (default: 0.5) */
+  presencePenalty?: number;
   /** Context window size - increase for longer prompts (default: 16384) */
   contextWindowSize?: number;
   /** Use compact system prompt for models with small context windows */
@@ -47,10 +51,13 @@ export interface ToolCall {
 
 // Recommended models for CesiumJS control tasks
 export const RECOMMENDED_MODELS = {
-  // Our fine-tuned Cesium model - trained on 11K+ Cesium command examples
-  // Uses Qwen2.5-0.5B as base (same architecture, optimized for Cesium tool calls)
+  // Our fine-tuned 1.5B model - trained on 88K Cesium command examples
   trained: [
-    'Qwen2.5-0.5B-Instruct-q4f16_1-MLC', // Base model - LoRA adapter available locally
+    'OrbPro-Cesium-SLM-1.5B-q4f16_1-MLC', // Custom trained 1.5B (851MB)
+  ],
+  // Fallback to base HuggingFace model
+  fallback: [
+    'Qwen2.5-1.5B-Instruct-q4f16_1-MLC', // Base HuggingFace model
   ],
   // Smaller, faster models - optimized for function calling
   small: [
@@ -86,16 +93,22 @@ export interface CustomModelConfig {
 
 // Registry for custom models (populate after compiling with scripts/compile-cesium-slm.sh)
 export const CUSTOM_MODEL_REGISTRY: Record<string, CustomModelConfig> = {
-  // OrbPro Cesium SLM - Fine-tuned on 11K+ Cesium commands
-  // Uncomment and update with your HuggingFace username after uploading:
-  //
-  // 'OrbPro-Cesium-SLM-0.5B-q4f16_1-MLC': {
-  //   modelId: 'OrbPro-Cesium-SLM-0.5B-q4f16_1-MLC',
-  //   modelLibUrl: 'https://huggingface.co/YOUR_USERNAME/OrbPro-Cesium-SLM-0.5B-q4f16_1-MLC/resolve/main/OrbPro-Cesium-SLM-0.5B-q4f16_1-MLC.wasm',
-  //   modelWeightsUrl: 'https://huggingface.co/YOUR_USERNAME/OrbPro-Cesium-SLM-0.5B-q4f16_1-MLC',
-  //   vramRequired: 512,
-  //   contextWindowSize: 4096,
-  // },
+  // OrbPro Cesium SLM 1.5B - Fine-tuned on 88K+ Cesium command examples
+  'OrbPro-Cesium-SLM-1.5B-q4f16_1-MLC': {
+    modelId: 'OrbPro-Cesium-SLM-1.5B-q4f16_1-MLC',
+    modelLibUrl: '/models/OrbPro-Cesium-SLM-1.5B-q4f16_1-MLC/resolve/main/OrbPro-Cesium-SLM-1.5B-q4f16_1-MLC.wasm',
+    modelWeightsUrl: '/models/OrbPro-Cesium-SLM-1.5B-q4f16_1-MLC/',
+    vramRequired: 1024,
+    contextWindowSize: 4096,
+  },
+  // OrbPro Cesium SLM 0.5B (legacy - broken)
+  'OrbPro-Cesium-SLM-0.5B-q4f16_1-MLC': {
+    modelId: 'OrbPro-Cesium-SLM-0.5B-q4f16_1-MLC',
+    modelLibUrl: '/models/OrbPro-Cesium-SLM-0.5B-q4f16_1-MLC/resolve/main/OrbPro-Cesium-SLM-0.5B-q4f16_1-MLC.wasm',
+    modelWeightsUrl: '/models/OrbPro-Cesium-SLM-0.5B-q4f16_1-MLC/',
+    vramRequired: 512,
+    contextWindowSize: 4096,
+  },
 };
 
 // Check if custom model is available and should be used
@@ -120,7 +133,9 @@ export class WebLLMEngine {
     this.config = {
       temperature: 0.7,
       topP: 0.9,
-      maxTokens: 512,
+      maxTokens: 256,
+      frequencyPenalty: 0.5,
+      presencePenalty: 0.5,
       contextWindowSize: 16384,
       ...config,
     };
@@ -131,16 +146,56 @@ export class WebLLMEngine {
       return;
     }
 
+    console.log('[WebLLM] Starting initialization for model:', this.config.modelId);
+
     // Dynamic import to support tree-shaking and lazy loading
     const webllm = await import('@mlc-ai/web-llm');
+    console.log('[WebLLM] web-llm imported');
 
     // Check if this is a custom model from our registry
     const customConfig = CUSTOM_MODEL_REGISTRY[this.config.modelId];
+    console.log('[WebLLM] Custom config:', customConfig);
 
     // Models are automatically cached in browser's Cache API by web-llm
     // Once downloaded, they persist across page reloads
     if (customConfig) {
+      // Convert relative paths to full URLs (web-llm requires absolute URLs)
+      const origin = typeof window !== 'undefined' ? window.location.origin : '';
+      const modelLibUrl = customConfig.modelLibUrl.startsWith('http')
+        ? customConfig.modelLibUrl
+        : `${origin}${customConfig.modelLibUrl}`;
+      let modelWeightsUrl = customConfig.modelWeightsUrl.startsWith('http')
+        ? customConfig.modelWeightsUrl
+        : `${origin}${customConfig.modelWeightsUrl}`;
+
+      // Clear web-llm's cache for this model to force fresh fetch
+      // This is needed when model files have moved or been updated
+      try {
+        // Clear Cache API
+        const cacheNames = await window.caches.keys();
+        for (const name of cacheNames) {
+          if (name.includes('webllm')) {
+            console.log('[WebLLM] Clearing Cache API:', name);
+            await window.caches.delete(name);
+          }
+        }
+        // Clear IndexedDB
+        const dbs = await window.indexedDB.databases();
+        for (const db of dbs) {
+          if (db.name && db.name.includes('webllm')) {
+            console.log('[WebLLM] Clearing IndexedDB:', db.name);
+            window.indexedDB.deleteDatabase(db.name);
+          }
+        }
+      } catch (e) {
+        console.log('[WebLLM] Could not clear caches:', e);
+      }
+
+      console.log('[WebLLM] Model lib URL:', modelLibUrl);
+      console.log('[WebLLM] Model weights URL:', modelWeightsUrl);
+
       // Load custom model with explicit URLs
+      console.log('[WebLLM] Creating MLC Engine...');
       this.engine = await webllm.CreateMLCEngine(
         this.config.modelId,
         {
@@ -155,9 +210,9 @@ export class WebLLMEngine {
           },
           appConfig: {
             model_list: [{
-              model: customConfig.modelWeightsUrl,
+              model: modelWeightsUrl,
               model_id: customConfig.modelId,
-              model_lib: customConfig.modelLibUrl,
+              model_lib: modelLibUrl,
               vram_required_MB: customConfig.vramRequired,
               low_resource_required: true,
             }],
@@ -216,31 +271,30 @@ export class WebLLMEngine {
     }
   }
 
-  async generate(userMessage: string, conversationHistory?: ChatCompletionMessageParam[]): Promise<LLMResponse> {
+  async generate(userMessage: string, _conversationHistory?: Array<{ role: string; content: string }>): Promise<LLMResponse> {
     if (!this.engine) {
       throw new Error('Engine not initialized. Call initialize() first.');
     }
 
+    // Build messages array with system prompt for tool calling
     const messages: ChatCompletionMessageParam[] = [];
 
-    // Add system prompt
+    // Add system prompt with tool definitions
     if (this.systemPrompt) {
       messages.push({ role: 'system', content: this.systemPrompt });
     }
 
-    // Add conversation history
-    if (conversationHistory) {
-      messages.push(...conversationHistory);
-    }
-
     // Add user message
     messages.push({ role: 'user', content: userMessage });
+
+    console.log('[WebLLM] Sending with system prompt:', this.systemPrompt ? 'yes' : 'no');
 
     const response = await this.engine.chat.completions.create({
       messages,
       temperature: this.config.temperature,
       top_p: this.config.topP,
       max_tokens: this.config.maxTokens,
+      // Note: frequency_penalty and presence_penalty may not be supported by all models
     });
 
     const content = response.choices[0]?.message?.content || '';

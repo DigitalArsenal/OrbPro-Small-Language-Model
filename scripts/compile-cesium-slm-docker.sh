@@ -19,7 +19,7 @@ NC='\033[0m'
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 PROJECT_DIR="$(dirname "$SCRIPT_DIR")"
 OUTPUT_DIR="${PROJECT_DIR}/mlc-models"
-MODEL_DIR="${PROJECT_DIR}/training/cesium-qwen-lora/merged"
+MODEL_DIR="${PROJECT_DIR}/training/cesium-qwen-lora-mlx/merged"
 CACHE_DIR="${PROJECT_DIR}/.cache/mlc-compile"
 
 OUTPUT_NAME="OrbPro-Cesium-SLM-0.5B-q4f16_1-MLC"
@@ -90,6 +90,19 @@ docker run --rm --platform linux/amd64 \
         echo \"MLC_LLM_SOURCE_DIR=\$MLC_LLM_SOURCE_DIR\"
         ls -la \$MLC_LLM_SOURCE_DIR/web/dist/wasm/mlc_wasm_runtime.bc
 
+        # Copy WASM runtime files to where TVM/MLC expects them
+        echo ''
+        echo '=== Setting up WASM runtime for TVM ==='
+        TVM_LIB_PATH=\$(python3 -c \"import tvm; print(tvm.__path__[0])\")
+
+        # Copy all bc files from the TVM web build
+        cp \$MLC_LLM_SOURCE_DIR/3rdparty/tvm/web/dist/wasm/*.bc \$TVM_LIB_PATH/
+
+        # Also copy from mlc-llm web if different
+        cp \$MLC_LLM_SOURCE_DIR/web/dist/wasm/*.bc \$TVM_LIB_PATH/ 2>/dev/null || true
+
+        ls -la \$TVM_LIB_PATH/*.bc
+
         cd /workspace/output
 
         echo ''
@@ -136,6 +149,7 @@ docker run --rm --platform linux/amd64 \
 {
   \"model_type\": \"qwen2\",
   \"quantization\": \"${QUANTIZATION}\",
+  \"conv_template\": \"qwen2\",
   \"model_config\": {
     \"hidden_size\": 896,
     \"intermediate_size\": 4864,
@@ -152,12 +166,23 @@ docker run --rm --platform linux/amd64 \
   \"prefill_chunk_size\": 1024,
   \"attention_sink_size\": -1,
   \"tensor_parallel_shards\": 1,
+  \"tokenizer_files\": [
+    \"tokenizer.json\",
+    \"tokenizer_config.json\"
+  ],
   \"generation_config\": {
     \"temperature\": 0.7,
     \"top_p\": 0.9
   }
 }
 EOF
+
+        echo ''
+        echo '=== Renaming cache file for web-llm compatibility ==='
+        # web-llm expects ndarray-cache.json, MLC creates tensor-cache.json
+        if [ -f ./${OUTPUT_NAME}/tensor-cache.json ]; then
+            cp ./${OUTPUT_NAME}/tensor-cache.json ./${OUTPUT_NAME}/ndarray-cache.json
+        fi
 
         echo ''
         echo '=== Done! ==='
@@ -182,12 +207,16 @@ echo ""
 
 echo -e "${YELLOW}Next Steps:${NC}"
 echo ""
-echo "  1. Upload to HuggingFace:"
+echo "  Option A: Local Development"
+echo "     # web-llm expects HuggingFace-style /resolve/main/ path structure"
+echo "     mkdir -p public/models/${OUTPUT_NAME}/resolve/main"
+echo "     cp ${OUTPUT_DIR}/${OUTPUT_NAME}/* public/models/${OUTPUT_NAME}/resolve/main/"
+echo ""
+echo "  Option B: Upload to HuggingFace"
 echo "     huggingface-cli repo create ${OUTPUT_NAME} --type model"
 echo "     cd ${OUTPUT_DIR}/${OUTPUT_NAME}"
 echo "     huggingface-cli upload YOUR_USERNAME/${OUTPUT_NAME} ."
-echo ""
-echo "  2. Update web-llm-engine.ts with the HuggingFace URL"
+echo "     # Then update modelWeightsUrl in web-llm-engine.ts to HuggingFace URL"
 echo ""
 echo -e "${BLUE}Tip:${NC} Keep the Docker image cached for faster rebuilds:"
 echo "     docker images mlc-cesium-compile"
