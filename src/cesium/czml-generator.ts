@@ -631,10 +631,11 @@ export function createSensorCone(
   const minimumClock = -halfHorizRad;
   const maximumClock = halfHorizRad;
 
-  // Cone angles (vertical slice) - from top of cone to specified angle
-  // In Cesium, cone angle 0 is along +Z, PI/2 is horizontal
-  const minimumCone = 0;
-  const maximumCone = vertRad;
+  // Cone angles (vertical slice) - centered around horizontal (π/2)
+  // This makes the sensor fan point outward horizontally, not straight up
+  const halfVertRad = vertRad / 2;
+  const minimumCone = Math.PI / 2 - halfVertRad;
+  const maximumCone = Math.PI / 2 + halfVertRad;
 
   // Calculate opacity (0-255)
   const alpha = Math.round((options.opacity ?? 0.5) * 255);

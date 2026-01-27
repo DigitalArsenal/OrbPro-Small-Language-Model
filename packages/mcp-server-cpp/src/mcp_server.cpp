@@ -80,7 +80,8 @@ static const char* TOOL_DEFINITIONS = R"JSON([
   {"name":"addCircleHere","description":"Add a circle on the ground at current camera view center.","inputSchema":{"type":"object","properties":{"radius":{"type":"number"},"color":{"type":"string"},"height":{"type":"number"},"extrudedHeight":{"type":"number"},"name":{"type":"string"}},"required":["radius"]}},
   {"name":"addModelHere","description":"Add a 3D model (glTF/glb) at current camera view center.","inputSchema":{"type":"object","properties":{"url":{"type":"string"},"ionAssetId":{"type":"number"},"scale":{"type":"number"},"heading":{"type":"number"},"name":{"type":"string"}}}},
   {"name":"addPolygonHere","description":"Add a polygon centered at current camera view.","inputSchema":{"type":"object","properties":{"radius":{"type":"number","description":"Radius in meters to generate polygon vertices around center"},"sides":{"type":"number","description":"Number of sides (3=triangle, 4=square, 6=hexagon, etc)"},"color":{"type":"string"},"height":{"type":"number"},"extrudedHeight":{"type":"number"},"name":{"type":"string"}}}},
-  {"name":"addEntityHere","description":"Generic tool to add any entity at current camera view center. Specify entityType: sphere, box, cylinder, point, label, circle, model.","inputSchema":{"type":"object","properties":{"entityType":{"type":"string","enum":["sphere","box","cylinder","point","label","circle","model"]},"radius":{"type":"number"},"color":{"type":"string"},"height":{"type":"number"},"name":{"type":"string"},"text":{"type":"string"}},"required":["entityType"]}}
+  {"name":"addEntityHere","description":"Generic tool to add any entity at current camera view center. Specify entityType: sphere, box, cylinder, point, label, circle, model.","inputSchema":{"type":"object","properties":{"entityType":{"type":"string","enum":["sphere","box","cylinder","point","label","circle","model"]},"radius":{"type":"number"},"color":{"type":"string"},"height":{"type":"number"},"name":{"type":"string"},"text":{"type":"string"}},"required":["entityType"]}},
+  {"name":"addSensorConeHere","description":"Add a sensor cone/fan/radar/camera FOV at current camera view center. Use when user says 'add sensor', 'add radar', 'add FOV', etc. without specifying a location.","inputSchema":{"type":"object","properties":{"radius":{"type":"number","description":"Length/range of sensor in meters (default: 50000)"},"horizontalAngle":{"type":"number","description":"Horizontal FOV in degrees, 1-360 (default: 45)"},"verticalAngle":{"type":"number","description":"Vertical FOV in degrees, 1-180 (default: 30)"},"heading":{"type":"number","description":"Direction in degrees, 0=North, 90=East (default: 0)"},"pitch":{"type":"number","description":"Pitch angle, -90=down, 0=horizontal (default: 0)"},"height":{"type":"number","description":"Height above ground in meters (default: 0)"},"innerRadius":{"type":"number","description":"Inner radius for hollow cone (default: 0)"},"color":{"type":"string","description":"Color name (default: lime)"},"opacity":{"type":"number","description":"Opacity 0-1 (default: 0.5)"},"name":{"type":"string"}}}}
 ])JSON";
 
 // Resource definitions
@@ -1246,6 +1247,56 @@ size_t handle_tools_call(const char* id, const char* params, char* response, siz
                          "Unknown entity type: %s. Use: sphere, box, cylinder, point, label, circle, model",
                          entity_type);
             }
+        }
+    }
+    else if (strcmp(tool_name, "addSensorConeHere") == 0) {
+        // Add sensor cone/fan at camera target
+        if (!camera_state_valid) {
+            strcpy(result_text, "Camera position not available. Please wait for camera to initialize.");
+        } else {
+            double radius = 5000;         // Default 5km range (visible at city scale)
+            double horizontal_angle = 45; // Default 45 degree horizontal FOV
+            double vertical_angle = 30;   // Default 30 degree vertical FOV
+            double heading = 0;           // Default pointing north
+            double pitch = 0;             // Default horizontal
+            double height = 100;          // Default 100m above ground (so it doesn't clip)
+            double inner_radius = 0;      // Default solid cone
+            double opacity = 0.5;         // Default semi-transparent
+            char color[32] = "lime";
+            char name[128] = "";
+
+            json_get_number(args_json, "radius", radius);
+            json_get_number(args_json, "horizontalAngle", horizontal_angle);
+            json_get_number(args_json, "verticalAngle", vertical_angle);
+            json_get_number(args_json, "heading", heading);
+            json_get_number(args_json, "pitch", pitch);
+            json_get_number(args_json, "height", height);
+            json_get_number(args_json, "innerRadius", inner_radius);
+            json_get_number(args_json, "opacity", opacity);
+            json_get_string(args_json, "color", color, sizeof(color));
+            json_get_string(args_json, "name", name, sizeof(name));
+
+            // Clamp values
+            if (horizontal_angle < 1) horizontal_angle = 1;
+            if (horizontal_angle > 360) horizontal_angle = 360;
+            if (vertical_angle < 1) vertical_angle = 1;
+            if (vertical_angle > 180) vertical_angle = 180;
+            if (opacity < 0) opacity = 0;
+            if (opacity > 1) opacity = 1;
+            if (radius < 100) radius = 100;
+            if (inner_radius < 0) inner_radius = 0;
+            if (inner_radius >= radius) inner_radius = 0;
+
+            int entity_id = entity_counter++;
+            snprintf(result_text, sizeof(result_text),
+                     "{\"type\":\"addSensorCone\",\"id\":\"entity-%d\",\"longitude\":%.6f,\"latitude\":%.6f,"
+                     "\"height\":%.1f,\"radius\":%.1f,\"horizontalAngle\":%.1f,\"verticalAngle\":%.1f,"
+                     "\"heading\":%.1f,\"pitch\":%.1f,\"innerRadius\":%.1f,\"color\":\"%s\",\"opacity\":%.2f,"
+                     "\"name\":\"%s\"}",
+                     entity_id, camera_target_longitude, camera_target_latitude,
+                     height, radius, horizontal_angle, vertical_angle,
+                     heading, pitch, inner_radius, color, opacity,
+                     name[0] ? name : "sensor");
         }
     }
     else {

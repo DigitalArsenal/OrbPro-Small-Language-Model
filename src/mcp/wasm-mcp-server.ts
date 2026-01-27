@@ -532,6 +532,83 @@ export class WasmMCPServer {
       } as CesiumCommand;
     }
 
+    if (type === 'addSensorCone') {
+      // Sensor cone uses partial ellipsoid with angular constraints
+      const radius = wasmOutput.radius as number || 50000;
+      const horizontalAngle = wasmOutput.horizontalAngle as number || 45;
+      const verticalAngle = wasmOutput.verticalAngle as number || 30;
+      const heading = wasmOutput.heading as number || 0;
+      const pitch = wasmOutput.pitch as number || 0;
+      const innerRadius = wasmOutput.innerRadius as number || 0;
+      const opacity = wasmOutput.opacity as number ?? 0.5;
+
+      // Convert angles to radians
+      const halfHorizRad = (horizontalAngle / 2) * (Math.PI / 180);
+      const vertRad = verticalAngle * (Math.PI / 180);
+      const headingRad = heading * (Math.PI / 180);
+      const pitchRad = pitch * (Math.PI / 180);
+
+      // Clock angles (horizontal slice) - centered around the heading direction
+      const minimumClock = -halfHorizRad;
+      const maximumClock = halfHorizRad;
+
+      // Cone angles (vertical slice) - centered around horizontal (π/2)
+      // This makes the sensor fan point outward horizontally, not straight up
+      const halfVertRad = vertRad / 2;
+      const minimumCone = Math.PI / 2 - halfVertRad;
+      const maximumCone = Math.PI / 2 + halfVertRad;
+
+      // Calculate orientation quaternion from heading and pitch
+      const cy = Math.cos(headingRad * 0.5);
+      const sy = Math.sin(headingRad * 0.5);
+      const cp = Math.cos(pitchRad * 0.5);
+      const sp = Math.sin(pitchRad * 0.5);
+      const cr = Math.cos(0);
+      const sr = Math.sin(0);
+
+      const qw = cr * cp * cy + sr * sp * sy;
+      const qx = sr * cp * cy - cr * sp * sy;
+      const qy = cr * sp * cy + sr * cp * sy;
+      const qz = cr * cp * sy - sr * sp * cy;
+
+      // Get color with opacity
+      const colorRgba = this.colorToRgba(wasmOutput.color as string || 'lime');
+      colorRgba[3] = Math.round(opacity * 255);
+
+      return {
+        type: 'entity.add',
+        entity: {
+          id: wasmOutput.id as string || `sensor-${Date.now()}`,
+          name: wasmOutput.name as string || 'Sensor',
+          position: {
+            cartographicDegrees: [
+              wasmOutput.longitude as number,
+              wasmOutput.latitude as number,
+              wasmOutput.height as number || 0
+            ]
+          },
+          orientation: {
+            unitQuaternion: [qx, qy, qz, qw],
+          },
+          ellipsoid: {
+            radii: { cartesian: [radius, radius, radius] },
+            innerRadii: innerRadius > 0 ? { cartesian: [innerRadius, innerRadius, innerRadius] } : undefined,
+            minimumClock,
+            maximumClock,
+            minimumCone,
+            maximumCone,
+            fill: true,
+            material: { solidColor: { color: { rgba: colorRgba } } },
+            outline: true,
+            outlineColor: { rgba: [255, 255, 255, 255] },
+            stackPartitions: 32,
+            slicePartitions: 32,
+            show: true,
+          }
+        }
+      } as CesiumCommand;
+    }
+
     if (type === 'addPolyline') {
       const positions = wasmOutput.positions as Array<{ longitude: number; latitude: number; height?: number }>;
       const degreesArray: number[] = [];
@@ -766,6 +843,7 @@ export class WasmMCPServer {
     const colors: Record<string, [number, number, number, number]> = {
       'red': [255, 0, 0, 255],
       'green': [0, 255, 0, 255],
+      'lime': [0, 255, 0, 255],
       'blue': [0, 0, 255, 255],
       'yellow': [255, 255, 0, 255],
       'cyan': [0, 255, 255, 255],

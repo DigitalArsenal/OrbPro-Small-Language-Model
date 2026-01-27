@@ -121,8 +121,14 @@ interface CesiumImageryLayerCollection {
 // Global Cesium reference (will be set by the browser environment)
 declare const Cesium: {
   Cartesian3: {
+    new (x: number, y: number, z: number): unknown;
     fromDegrees: (lon: number, lat: number, height?: number) => unknown;
     clone: (cartesian: unknown) => unknown;
+  };
+  Quaternion: new (x: number, y: number, z: number, w: number) => unknown;
+  Color: {
+    new (r: number, g: number, b: number, a: number): unknown;
+    WHITE: unknown;
   };
   Cartographic: {
     fromDegrees: (lon: number, lat: number, height?: number) => unknown;
@@ -417,6 +423,21 @@ export class CesiumCommandExecutor {
   }
 
   private async executeEntityAdd(command: Extract<CesiumCommand, { type: 'entity.add' }>): Promise<{ success: boolean; message: string; data?: unknown }> {
+    const entity = command.entity as unknown as Record<string, unknown>;
+    const ellipsoid = entity.ellipsoid as Record<string, unknown> | undefined;
+
+    // Check if this is a partial ellipsoid (sensor cone) - CZML doesn't support these
+    // Use Entity API directly instead
+    if (ellipsoid && (ellipsoid.minimumCone !== undefined || ellipsoid.minimumClock !== undefined)) {
+      console.log('[CommandExecutor] Detected partial ellipsoid, using Entity API:', {
+        hasEllipsoid: !!ellipsoid,
+        minimumCone: ellipsoid?.minimumCone,
+        minimumClock: ellipsoid?.minimumClock,
+      });
+      return this.addPartialEllipsoidEntity(command);
+    }
+
+    // Standard CZML path for other entities
     const czml: CZMLDocumentArray = [
       { id: 'document', name: 'Entity', version: '1.0' },
       command.entity,
@@ -431,6 +452,135 @@ export class CesiumCommandExecutor {
       message: `Entity '${command.entity.id}' added`,
       data: { id: command.entity.id },
     };
+  }
+
+  /**
+   * Add a partial ellipsoid (sensor cone) using the Entity API directly
+   * CZML doesn't support minimumCone/maximumCone/minimumClock/maximumClock
+   */
+  private addPartialEllipsoidEntity(command: Extract<CesiumCommand, { type: 'entity.add' }>): { success: boolean; message: string; data?: unknown } {
+    try {
+      const entity = command.entity as unknown as Record<string, unknown>;
+      const position = entity.position as { cartographicDegrees?: number[] } | undefined;
+      const ellipsoid = entity.ellipsoid as Record<string, unknown> | undefined;
+      const orientation = entity.orientation as { unitQuaternion?: number[] } | undefined;
+
+      console.log('[SensorCone] Adding partial ellipsoid:', {
+        id: entity.id,
+        position,
+        ellipsoid: {
+          minimumCone: ellipsoid?.minimumCone,
+          maximumCone: ellipsoid?.maximumCone,
+          minimumClock: ellipsoid?.minimumClock,
+          maximumClock: ellipsoid?.maximumClock,
+          radii: ellipsoid?.radii,
+        },
+      });
+
+      if (!position?.cartographicDegrees || !ellipsoid) {
+        console.error('[SensorCone] Invalid entity - missing position or ellipsoid');
+        return { success: false, message: 'Invalid partial ellipsoid entity' };
+      }
+
+      const coords = position.cartographicDegrees;
+      const lon = coords[0] ?? 0;
+      const lat = coords[1] ?? 0;
+      const height = coords[2] ?? 0;
+      const radiiData = (ellipsoid.radii as { cartesian?: number[] })?.cartesian ?? [1000, 1000, 1000];
+      const innerRadiiData = (ellipsoid.innerRadii as { cartesian?: number[] })?.cartesian;
+      const materialData = (ellipsoid.material as { solidColor?: { color?: { rgba?: number[] } } })?.solidColor?.color?.rgba ?? [0, 255, 0, 128];
+
+      console.log('[SensorCone] Parsed data:', { lon, lat, height, radiiData, materialData });
+
+      // Create Cesium color from RGBA (with defaults)
+      const r = (materialData[0] ?? 0) / 255;
+      const g = (materialData[1] ?? 255) / 255;
+      const b = (materialData[2] ?? 0) / 255;
+      const a = (materialData[3] ?? 128) / 255;
+      const color = new Cesium.Color(r, g, b, a);
+
+      // Build entity options for Cesium
+      const cesiumPosition = Cesium.Cartesian3.fromDegrees(lon, lat, height);
+      const cesiumRadii = new Cesium.Cartesian3(radiiData[0] ?? 1000, radiiData[1] ?? 1000, radiiData[2] ?? 1000);
+
+      // Build partial ellipsoid with cone AND clock constraints for sensor wedge
+      // Cesium cone: 0 = +Z (up), π/2 = horizontal, π = -Z (down)
+      // Cesium clock: 0 = +X direction, increases counter-clockwise when viewed from +Z
+      // innerRadii creates hollow interior showing vertex and side walls
+      const ellipsoidOptions: Record<string, unknown> = {
+        show: true,
+        radii: new Cesium.Cartesian3(5000, 5000, 5000), // 5km outer radius
+        innerRadii: new Cesium.Cartesian3(1, 1, 1), // Tiny inner = vertex at center
+        // Cone constraints - vertical extent (60° band centered on horizontal)
+        minimumCone: Cesium.Math.toRadians(60),
+        maximumCone: Cesium.Math.toRadians(120),
+        // Clock constraints - horizontal extent (30° wedge)
+        minimumClock: Cesium.Math.toRadians(-15),
+        maximumClock: Cesium.Math.toRadians(15),
+        fill: true,
+        material: Cesium.Color.LIME.withAlpha(0.5),
+        outline: true,
+        outlineColor: Cesium.Color.WHITE,
+        stackPartitions: 64,
+        slicePartitions: 64,
+      };
+
+      console.log('[SensorCone] Creating partial ellipsoid at', lon, lat, height,
+        'with cone:', ellipsoid.minimumCone, '-', ellipsoid.maximumCone,
+        'clock:', ellipsoid.minimumClock, '-', ellipsoid.maximumClock);
+
+      // Temporarily disabled for debugging
+      // if (innerRadiiData) {
+      //   ellipsoidOptions.innerRadii = new Cesium.Cartesian3(innerRadiiData[0] ?? 0, innerRadiiData[1] ?? 0, innerRadiiData[2] ?? 0);
+      // }
+
+      const entityOptions: Record<string, unknown> = {
+        id: entity.id as string,
+        name: entity.name as string,
+        position: cesiumPosition,
+        ellipsoid: ellipsoidOptions,
+      };
+
+      // Add orientation if specified (for heading/pitch)
+      if (orientation?.unitQuaternion && orientation.unitQuaternion.length >= 4) {
+        const quat = orientation.unitQuaternion;
+        entityOptions.orientation = new Cesium.Quaternion(quat[0] ?? 0, quat[1] ?? 0, quat[2] ?? 0, quat[3] ?? 1);
+        console.log('[SensorCone] Applied orientation:', quat);
+      }
+
+      console.log('[SensorCone] Adding entity with options:', JSON.stringify({
+        id: entityOptions.id,
+        name: entityOptions.name,
+        position: { lon, lat, height },
+        ellipsoid: {
+          radii: radiiData,
+          minimumCone: ellipsoid.minimumCone,
+          maximumCone: ellipsoid.maximumCone,
+          minimumClock: ellipsoid.minimumClock,
+          maximumClock: ellipsoid.maximumClock,
+        },
+        orientation: orientation?.unitQuaternion,
+        color: { r, g, b, a },
+      }, null, 2));
+
+      console.log('[SensorCone] Entity count before:', this.viewer.entities.values.length);
+      const addedEntity = this.viewer.entities.add(entityOptions);
+      console.log('[SensorCone] Entity count after:', this.viewer.entities.values.length);
+      console.log('[SensorCone] Entity added:', addedEntity);
+      console.log('[SensorCone] Entity ellipsoid:', addedEntity.ellipsoid);
+
+      return {
+        success: true,
+        message: `Sensor cone '${entity.id}' added`,
+        data: { id: entity.id },
+      };
+    } catch (error) {
+      console.error('[SensorCone] Error adding partial ellipsoid:', error);
+      return {
+        success: false,
+        message: `Failed to add sensor cone: ${error instanceof Error ? error.message : String(error)}`,
+      };
+    }
   }
 
   private executeEntityRemove(command: Extract<CesiumCommand, { type: 'entity.remove' }>): { success: boolean; message: string } {

@@ -4,6 +4,7 @@
  */
 
 import type { ToolDefinition } from './web-llm-engine';
+import { buildTerminologyGuide } from './terminology-mapping';
 
 /**
  * Height recommendations by location type (in meters)
@@ -443,6 +444,13 @@ export const FEW_SHOT_EXAMPLES = [
     userInput: 'Add a 30x50 degree sensor at coordinates 2.35, 48.85, lime green, semi-opaque',
     response: '{"tool": "addSensorCone", "arguments": {"longitude": 2.35, "latitude": 48.85, "radius": 50000, "horizontalAngle": 30, "verticalAngle": 50, "color": "lime", "opacity": 0.5}}',
     explanation: 'Coordinate-based sensor cone when user provides lat/lon',
+  },
+  {
+    category: 'entity',
+    tool: 'addSensorConeHere',
+    userInput: 'Add a sensor fan that is 30 degrees wide and 50 degrees tall',
+    response: '{"tool": "addSensorConeHere", "arguments": {"radius": 50000, "horizontalAngle": 30, "verticalAngle": 50, "color": "lime", "opacity": 0.5}}',
+    explanation: 'Sensor without location uses addSensorConeHere (places at camera view center)',
   },
   {
     category: 'entity',
@@ -1793,24 +1801,24 @@ export const FEW_SHOT_EXAMPLES = [
   },
   {
     category: 'disambiguation',
-    tool: 'addSensorConeAtLocation',
+    tool: 'addSensorConeHere',
     userInput: 'Create a radar cone',
-    response: '{"tool": "addSensorConeAtLocation", "arguments": {"locationName": "requested location", "radius": 100000, "horizontalAngle": 45, "verticalAngle": 30}}',
-    explanation: 'Radar cone uses addSensorConeAtLocation',
+    response: '{"tool": "addSensorConeHere", "arguments": {"radius": 100000, "horizontalAngle": 45, "verticalAngle": 30, "color": "cyan", "opacity": 0.5}}',
+    explanation: 'Radar cone without location uses addSensorConeHere (camera view center)',
   },
   {
     category: 'disambiguation',
-    tool: 'addSensorConeAtLocation',
+    tool: 'addSensorConeHere',
     userInput: 'Show camera field of view',
-    response: '{"tool": "addSensorConeAtLocation", "arguments": {"locationName": "requested location", "radius": 1000, "horizontalAngle": 60, "verticalAngle": 40, "color": "yellow", "opacity": 0.3}}',
-    explanation: 'Camera FOV is a sensor cone',
+    response: '{"tool": "addSensorConeHere", "arguments": {"radius": 1000, "horizontalAngle": 60, "verticalAngle": 40, "color": "yellow", "opacity": 0.3}}',
+    explanation: 'Camera FOV without location uses addSensorConeHere (camera view center)',
   },
   {
     category: 'disambiguation',
-    tool: 'addSensorConeAtLocation',
+    tool: 'addSensorConeHere',
     userInput: 'Add a detection zone',
-    response: '{"tool": "addSensorConeAtLocation", "arguments": {"locationName": "requested location", "radius": 50000, "horizontalAngle": 90, "verticalAngle": 45, "color": "cyan", "opacity": 0.4}}',
-    explanation: 'Detection zone is a sensor cone',
+    response: '{"tool": "addSensorConeHere", "arguments": {"radius": 50000, "horizontalAngle": 90, "verticalAngle": 45, "color": "cyan", "opacity": 0.4}}',
+    explanation: 'Detection zone without location uses addSensorConeHere (camera view center)',
   },
 ] as const;
 
@@ -1834,9 +1842,14 @@ PREFERRED TOOLS (use these when you have a place name):
 FALLBACK TOOLS (only use when user provides raw coordinates):
 - flyTo, addSphere, addBox, addPoint, addSensorCone, etc.
 
+"HERE" TOOLS (use when NO location is specified - places at camera view center):
+- addSphereHere, addBoxHere, addPointHere, addLabelHere, addCylinderHere, addCircleHere, addSensorConeHere
+
 ## SENSOR TERMINOLOGY
 
-"sensor fan", "radar cone", "camera FOV", "detection zone", "cone segment" → Use addSensorConeAtLocation
+"sensor fan", "radar cone", "camera FOV", "detection zone", "cone segment":
+- With location name → addSensorConeAtLocation
+- Without location → addSensorConeHere (places at camera view center)
 - horizontalAngle: width in degrees (1-360)
 - verticalAngle: height in degrees (1-180)
 - heading: direction it points (0=North, 90=East)
@@ -1881,9 +1894,10 @@ Valid colors: red, green, blue, yellow, orange, purple, pink, cyan, white, black
    User: "fly to Paris" → {"tool": "flyToLocation", "arguments": {"locationName": "Paris"}}
    User: "add red sphere at CERN" → {"tool": "addSphereAtLocation", "arguments": {"locationName": "CERN", "radius": 1000, "color": "red"}}
 
-2. SENSOR/RADAR/FOV REQUESTS: Use addSensorConeAtLocation (ask for location if not provided)
+2. SENSOR/RADAR/FOV REQUESTS: If location given, use addSensorConeAtLocation. If NO location given, use addSensorConeHere (places at camera view center).
    User: "add sensor fan 30 wide 50 tall at Paris" → {"tool": "addSensorConeAtLocation", "arguments": {"locationName": "Paris", "radius": 50000, "horizontalAngle": 30, "verticalAngle": 50, "color": "lime", "opacity": 0.5}}
-   User: "radar cone pointing east" → {"tool": "addSensorConeAtLocation", "arguments": {"locationName": "[ask for location]", "radius": 100000, "horizontalAngle": 45, "verticalAngle": 30, "heading": 90}}
+   User: "add sensor fan 30 wide 50 tall" → {"tool": "addSensorConeHere", "arguments": {"radius": 50000, "horizontalAngle": 30, "verticalAngle": 50, "color": "lime", "opacity": 0.5}}
+   User: "radar cone pointing east" → {"tool": "addSensorConeHere", "arguments": {"radius": 100000, "horizontalAngle": 45, "verticalAngle": 30, "heading": 90, "color": "cyan", "opacity": 0.5}}
 
 3. USER PROVIDES COORDINATES: Only then use coordinate-based tools like flyTo, addBox.
    User: "fly to 40.7, -74.0" → {"tool": "flyTo", "arguments": {"longitude": -74.0, "latitude": 40.7}}
@@ -1991,6 +2005,7 @@ function buildExamplesSection(): string {
 export function buildSystemPrompt(tools: ToolDefinition[]): string {
   const sections: string[] = [
     SYSTEM_PROMPT_BASE,
+    buildTerminologyGuide(),
     buildToolsSection(tools),
     buildExamplesSection(),
     buildKnownLocationsSection(),
@@ -2128,7 +2143,8 @@ LOCATIONS: NYC(-74.006,40.7128) London(-0.1276,51.5074) Paris(2.3522,48.8566) To
 IMPORTANT DISTINCTIONS:
 - sphere/ball → addSphere (3D volume floating above ground)
 - circle → addCircle (flat 2D shape on ground)
-- sensor/radar/camera/FOV/fan/cone segment → addSensorCone (partial ellipsoid for field of view visualization)
+- sensor/radar/camera/FOV/fan with location → addSensorConeAtLocation
+- sensor/radar/camera/FOV/fan without location → addSensorConeHere (camera view center)
 - "fly to Paris" → flyTo (navigate to location)
 - "fly to the marker" → flyToEntity (navigate to existing entity)
 - marker/point/pin → addPoint
@@ -2141,8 +2157,9 @@ EXAMPLES:
 "sphere 10km above DC" → {"tool":"addSphere","arguments":{"longitude":-77.0369,"latitude":38.9072,"radius":5000,"height":10000,"name":"Sphere","color":"red"}}
 "draw circle around Paris" → {"tool":"addCircle","arguments":{"longitude":2.3522,"latitude":48.8566,"radius":10000,"name":"Circle","color":"yellow"}}
 "sensor fan 30 degrees wide 50 tall at Paris" → {"tool":"addSensorConeAtLocation","arguments":{"locationName":"Paris","radius":50000,"horizontalAngle":30,"verticalAngle":50,"color":"lime","opacity":0.5}}
-"add radar cone pointing east" → {"tool":"addSensorCone","arguments":{"longitude":0,"latitude":0,"radius":100000,"horizontalAngle":45,"verticalAngle":30,"heading":90,"color":"cyan","opacity":0.4}}
-"camera FOV visualization" → {"tool":"addSensorCone","arguments":{"longitude":0,"latitude":0,"radius":1000,"horizontalAngle":60,"verticalAngle":40,"color":"yellow","opacity":0.3}}
+"add radar cone pointing east" → {"tool":"addSensorConeHere","arguments":{"radius":100000,"horizontalAngle":45,"verticalAngle":30,"heading":90,"color":"cyan","opacity":0.4}}
+"camera FOV visualization" → {"tool":"addSensorConeHere","arguments":{"radius":1000,"horizontalAngle":60,"verticalAngle":40,"color":"yellow","opacity":0.3}}
+"add sensor fan 30 wide 50 tall" → {"tool":"addSensorConeHere","arguments":{"radius":50000,"horizontalAngle":30,"verticalAngle":50,"color":"lime","opacity":0.5}}
 "set view instantly to Tokyo" → {"tool":"setView","arguments":{"longitude":139.6917,"latitude":35.6895,"height":500000}}
 "rotate camera 90 degrees right" → {"tool":"rotateCamera","arguments":{"heading":90}}
 "follow the airplane" → {"tool":"trackEntity","arguments":{"entityId":"airplane"}}
