@@ -1,15 +1,15 @@
 #!/usr/bin/env node
 /**
- * Build Binary Location Database using FlatBuffers Aligned Format
+ * Build Binary Location Database
  *
  * Creates an aligned binary database from:
  * - All 50 US states + DC + territories
  * - All US cities with population > 1000 (from Census)
  * - International cities and landmarks
  *
- * Uses the aligned FlatBuffers format defined in locations_aligned.fbs:
- * - Header: 64 bytes (AlignedLocationDatabaseHeader)
- * - Records: 148 bytes each (AlignedLocation)
+ * Binary format:
+ * - Header: 64 bytes
+ * - Records: 148 bytes each (sorted alphabetically for binary search)
  */
 
 import fs from 'fs';
@@ -158,7 +158,7 @@ function writeHeader(buffer, locationCount) {
 
 // Build the database
 async function buildDatabase() {
-  console.log('Building binary location database (FlatBuffers aligned format)...\n');
+  console.log('Building binary location database...\n');
 
   const locations = new Map(); // name -> { lon, lat, heading, population, type }
 

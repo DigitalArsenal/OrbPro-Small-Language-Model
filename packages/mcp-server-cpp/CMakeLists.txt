@@ -4,9 +4,6 @@ project(cesium-mcp-wasm VERSION 1.0.0 LANGUAGES CXX)
 set(CMAKE_CXX_STANDARD 17)
 set(CMAKE_CXX_STANDARD_REQUIRED ON)
 
-# FlatBuffers include directory (will be copied from sibling repo)
-set(FLATBUFFERS_INCLUDE_DIR "${CMAKE_SOURCE_DIR}/include/flatbuffers")
-
 # Generated headers directory
 set(GENERATED_INCLUDE_DIR "${CMAKE_SOURCE_DIR}/include/generated")
 
@@ -32,7 +29,6 @@ add_executable(${PROJECT_NAME} ${SOURCES} ${HEADERS})
 # Include directories
 target_include_directories(${PROJECT_NAME} PRIVATE
     ${CMAKE_SOURCE_DIR}/include
-    ${FLATBUFFERS_INCLUDE_DIR}
     ${GENERATED_INCLUDE_DIR}
 )
 
